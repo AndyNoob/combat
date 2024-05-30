@@ -1,0 +1,4 @@
+name: combat
+version: '${version}'
+main: comfortable_andy.combat.CombatMain
+api-version: '1.20'
