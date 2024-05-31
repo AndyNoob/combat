@@ -1,5 +1,6 @@
 package comfortable_andy.combat.util;
 
+import comfortable_andy.combat.CombatMain;
 import org.bukkit.Location;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Damageable;
