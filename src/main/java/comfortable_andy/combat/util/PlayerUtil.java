@@ -27,10 +27,6 @@ public class PlayerUtil {
         if (Math.abs(delta) <= Vector.getEpsilon()) return Collections.emptyMap();
         loc = loc.clone();
 
-        /*new OrientedBox(player.getBoundingBox())
-                .rotateBy(BlockFace.UP.getDirection(), Math.toRadians(-player.getYaw()))
-                .display(loc.getWorld());*/
-
         final Map<Damageable, Vector> map = new HashMap<>();
         final float halfSize = size / 2;
         final OrientedBox box = new OrientedBox(
