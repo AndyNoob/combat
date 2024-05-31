@@ -97,28 +97,28 @@ public class OrientedBox {
             final Vector mtvCandidate;
             double multi = vals.get(2) - vals.get(1);
 
-            CombatMain.getInstance().getLogger().info("axis " + axis + " " + axis.isNormalized());
+            CombatMain.getInstance().debug("axis " + axis + " " + axis.isNormalized());
 
             if (thisRange.containsRange(otherRange) || otherRange.containsRange(thisRange)) {
-                CombatMain.getInstance().getLogger().info("contains");
+                CombatMain.getInstance().debug("contains");
                 multi += Math.copySign(1, multi) * Math.min(Math.abs(vals.get(3) - vals.get(2)), Math.abs(vals.get(1) - vals.get(0)));
             }
 
             if (vals.get(0) == otherRange.getMinimumDouble()) {
-                CombatMain.getInstance().getLogger().info("negating");
+                CombatMain.getInstance().debug("negating");
                 multi *= -1;
             }
 
             mtvCandidate = axis.clone().multiply(multi);
 
-            CombatMain.getInstance().getLogger().info("ranges -- this: " + thisRange + ", other: " + otherRange);
-            CombatMain.getInstance().getLogger().info("sorted -- " + vals);
-            CombatMain.getInstance().getLogger().info("multi -- " + multi);
-            CombatMain.getInstance().getLogger().info("candidate -- " + mtvCandidate.toVector3f().toString(new DecimalFormat("#.##")));
+            CombatMain.getInstance().debug("ranges -- this: " + thisRange + ", other: " + otherRange);
+            CombatMain.getInstance().debug("sorted -- " + vals);
+            CombatMain.getInstance().debug("multi -- " + multi);
+            CombatMain.getInstance().debug("candidate -- " + mtvCandidate.toVector3f().toString(new DecimalFormat("#.##")));
 
             if (mtv == null || mtv.lengthSquared() > mtvCandidate.lengthSquared()) {
                 mtv = mtvCandidate;
-                System.out.println("     candidate selected");
+                CombatMain.getInstance().debug("     candidate selected");
             }
         }
         return mtv;

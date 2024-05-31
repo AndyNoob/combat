@@ -52,8 +52,8 @@ public class PlayerUtil {
             box.display(loc.getWorld());
             // TODO efficient expansion of collider?
             possible.removeIf(e -> {
-                System.out.println(e.getName());
-                System.out.println(new OrientedBox(e.getBoundingBox()));
+                CombatMain.getInstance().debug(e.getName());
+                CombatMain.getInstance().debug(new OrientedBox(e.getBoundingBox()));
                 final Vector mtv = box.collides(new OrientedBox(e.getBoundingBox()));
                 if (mtv != null) {
                     map.put(e, mtv);
