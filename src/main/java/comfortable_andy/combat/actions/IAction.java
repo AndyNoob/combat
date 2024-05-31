@@ -12,9 +12,7 @@ public interface IAction {
     }
 
     enum ActionResult {
-        CRITICAL,
-        SWEEP,
-        POKE,
+        ACTIVATED,
         NONE
     }
 

@@ -8,7 +8,8 @@ public class SweepAction implements IAction {
     public ActionResult tryActivate(CombatPlayerData player, ActionType type) {
         if (type != ActionType.ATTACK) return ActionResult.NONE;
         if (player.averageCameraAngleDelta().x <= 8) return ActionResult.NONE;
-        return ActionResult.SWEEP;
+        // TODO actually sweep
+        return ActionResult.ACTIVATED;
     }
 
 }
