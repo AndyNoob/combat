@@ -49,3 +49,8 @@ processResources {
         expand props
     }
 }
+
+runServer {
+    jvmArgs("-Xms1G")
+    jvmArgs("-Xmx1G")
+}
