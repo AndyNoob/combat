@@ -51,4 +51,12 @@ public final class CombatMain extends JavaPlugin implements Listener {
         getLogger().info(String.join(" ", Arrays.stream(stuff).map(Objects::toString).toArray(String[]::new)));
     }
 
+    public CombatPlayerData getData(Player player) {
+        return playerData.computeIfAbsent(player, CombatPlayerData::new);
+    }
+
+    public void purgeData() {
+        playerData.entrySet().removeIf(d -> !d.getValue().getPlayer().isOnline());
+    }
+
 }

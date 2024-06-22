@@ -4,15 +4,16 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.util.Map;
+
 public class CombatRunnable extends BukkitRunnable {
 
     @Override
     public void run() {
+        CombatMain.getInstance().purgeData();
         for (Player player : Bukkit.getOnlinePlayers()) {
-            CombatMain.getInstance().playerData.computeIfAbsent(player, CombatPlayerData::new);
+            CombatMain.getInstance().getData(player).tick();
         }
-        CombatMain.getInstance().playerData.values()
-                .forEach(CombatPlayerData::tick);
     }
 
 }
