@@ -20,8 +20,8 @@ public class VecUtil {
         return new Vector(v.x, v.y, v.z);
     }
 
-    public static Quaterniond fromDir(float yaw, float pitch) {
-        return new Quaterniond().rotateX(Math.toRadians(pitch)).rotateY(-Math.toRadians(yaw));
+    public static Quaterniond fromDir(float rotY, float rotX) {
+        return new Quaterniond().rotateX(Math.toRadians(rotX)).rotateY(-Math.toRadians(rotY));
     }
 
     public static Quaterniond fromDir(Vector2f v) {

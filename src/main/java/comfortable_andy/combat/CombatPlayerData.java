@@ -8,6 +8,8 @@ import org.joml.Vector2f;
 import java.text.DecimalFormat;
 import java.util.Vector;
 
+import static comfortable_andy.combat.util.VecUtil.FORMAT;
+
 public class CombatPlayerData {
 
     private static final int CACHE_COUNT = 5;
@@ -25,12 +27,12 @@ public class CombatPlayerData {
 
     public void tick() {
         final Location location = this.player.getLocation();
-        this.enterCamera(new Vector2f(location.getPitch(), location.getYaw()));
-        this.player.sendActionBar("delta: " + averageCameraAngleDelta().toString(new DecimalFormat("#.##")) + " cap: " + this.lastCameraAngles.capacity());
+        this.enterCamera(new Vector2f(location.getYaw(), location.getPitch()));
+        this.player.sendActionBar("delta: " + averageCameraAngleDelta().toString(FORMAT) + " cap: " + this.lastCameraAngles.capacity());
     }
 
     /**
-     * @param v x-axis is left-right and y-axis is up-down
+     * @param v x-axis is rotX and y-axis is rotY
      */
     private void enterCamera(Vector2f v) {
         this.lastCameraAngles.add(0, v);
@@ -39,7 +41,7 @@ public class CombatPlayerData {
 
     /**
      *
-     * @return average camera angle delta from up to the last {@link #CACHE_COUNT} ticks, where x-axis is yaw and y-axis is pitch
+     * @return average camera angle delta from up to the last {@link #CACHE_COUNT} ticks, where x-axis is yaw (rotX) and y-axis is pitch (rotY)
      */
     public Vector2f averageCameraAngleDelta() {
         final Vector2f accumulator = new Vector2f();
