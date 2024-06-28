@@ -5,7 +5,6 @@ import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.joml.Vector2f;
 
-import java.text.DecimalFormat;
 import java.util.Vector;
 
 import static comfortable_andy.combat.util.VecUtil.FORMAT;
