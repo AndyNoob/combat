@@ -17,12 +17,17 @@ repositories {
         name = "sonatype"
         url = "https://oss.sonatype.org/content/groups/public/"
     }
+    maven {
+        name = "jitback.io"
+        url = "https://jitpack.io"
+    }
 }
 
 dependencies {
     compileOnly 'org.projectlombok:lombok:1.18.32'
     annotationProcessor 'org.projectlombok:lombok:1.18.32'
     paperweight.paperDevBundle("1.21-R0.1-SNAPSHOT")
+    implementation 'com.github.AndyNoob:Mapable:v3.6.0'
 }
 
 def targetJavaVersion = 21
