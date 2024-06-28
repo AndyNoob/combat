@@ -64,7 +64,6 @@ public class PlayerUtil {
                 final Vector mtv = attackBox.collides(entityBox);
                 if (mtv != null) {
                     map.put(e.getKey(), mtv);
-                    System.out.println("removed");
                     return true;
                 } else return false;
             });
