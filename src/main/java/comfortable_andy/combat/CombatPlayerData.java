@@ -23,7 +23,7 @@ public class CombatPlayerData {
 
     public void tick() {
         final Location location = this.player.getLocation();
-        this.enterCamera(new Vector2f(location.getYaw(), location.getPitch()));
+        this.enterCamera(new Vector2f(location.getPitch(), location.getYaw()));
         this.player.sendActionBar("delta: " + averageCameraAngleDelta().toString(new DecimalFormat("#.##")) + " cap: " + this.lastCameraAngles.capacity());
     }
 
@@ -37,7 +37,7 @@ public class CombatPlayerData {
 
     /**
      *
-     * @return average camera angle delta from up to the last {@link #CACHE_COUNT} ticks, where x-axis is left-right and y-axis is up-down
+     * @return average camera angle delta from up to the last {@link #CACHE_COUNT} ticks, where x-axis is yaw and y-axis is pitch
      */
     public Vector2f averageCameraAngleDelta() {
         final Vector2f accumulator = new Vector2f();

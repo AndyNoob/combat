@@ -1,7 +1,7 @@
 package comfortable_andy.combat.util;
 
 import comfortable_andy.combat.CombatMain;
-import lombok.ToString;
+import lombok.Getter;
 import org.apache.commons.lang.math.DoubleRange;
 import org.bukkit.Particle;
 import org.bukkit.World;
@@ -9,18 +9,18 @@ import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix3d;
+import org.joml.Quaterniondc;
 import org.joml.Vector3d;
 
 import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.List;
 
-import static comfortable_andy.combat.util.VecUtil.fromBukkit;
-import static comfortable_andy.combat.util.VecUtil.fromJoml;
+import static comfortable_andy.combat.util.VecUtil.*;
 
-@ToString
 public class OrientedBox {
 
+    @Getter
     private Vector center;
     private final Vector[] vertices = new Vector[8];
     private final Matrix3d axis = new Matrix3d();
@@ -46,7 +46,7 @@ public class OrientedBox {
         return this;
     }
 
-    public OrientedBox move(Vector move) {
+    public OrientedBox moveBy(Vector move) {
         this.center.add(move);
         for (Vector vertex : this.vertices) {
             vertex.add(move);
@@ -54,15 +54,14 @@ public class OrientedBox {
         return this;
     }
 
-    public OrientedBox rotateBy(Vector axis, double angRadians) {
+    public OrientedBox rotateBy(Quaterniondc rot) {
         for (int i = 0; i < this.vertices.length; i++) {
             final Vector v = this.vertices[i];
-            this.vertices[i] = v.subtract(this.center).rotateAroundNonUnitAxis(axis, angRadians).add(this.center);
+            this.vertices[i] = fromJoml(fromBukkit(v.subtract(this.center)).rotate(rot)).add(this.center);
         }
-        this.axis.rotate(angRadians, fromBukkit(axis));
+        this.axis.rotate(rot);
         return this;
     }
-
 
     private DoubleRange project(Vector axis) {
         double min = Double.POSITIVE_INFINITY;
@@ -126,8 +125,16 @@ public class OrientedBox {
 
     public void display(World world) {
         for (Vector vertex : this.vertices) {
-            world.spawnParticle(Particle.VILLAGER_HAPPY, vertex.toLocation(world), 1, 0, 0, 0);
+            world.spawnParticle(Particle.HAPPY_VILLAGER, vertex.toLocation(world), 1, 0, 0, 0);
         }
     }
 
+    @Override
+    public String toString() {
+        return "OrientedBox{\n" +
+                "    center=" + str(fromBukkit(center)) +
+                "\n    vertices=" + Arrays.stream(vertices).map(VecUtil::fromBukkit).map(VecUtil::str).toList() +
+                "\n    axis=" + axis.toString(FORMAT).replace("\n", "  |  ") +
+                "\n}";
+    }
 }

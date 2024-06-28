@@ -2,62 +2,73 @@ package comfortable_andy.combat.util;
 
 import comfortable_andy.combat.CombatMain;
 import org.bukkit.Location;
-import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Damageable;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
+import org.joml.Quaterniond;
 
-import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 public class PlayerUtil {
 
     /**
-     * Say the {@code startYaw} is 0, {@code delta} is 10, and {@code steps} is 5, there would be 6 collision checks (the initial + the 5 steps).
-     * @param loc the origin of the sweep, should be the eye location
-     * @param startYaw the yaw to start the sweep
-     * @param delta this added to {@code startYaw} should be the end yaw
+     * @param loc   the origin of the sweep, should be the eye location
+     * @param start the rotation to start the sweep
+     * @param delta this added to {@code start}
      * @param steps how many steps
      * @return the hit entities and their minimum translation vector.
      */
     @NotNull
-    public static Map<Damageable, @NotNull Vector> sweep(Location loc, float reach, float size, float startYaw, float delta, int steps) {
-        if (Math.abs(delta) <= Vector.getEpsilon()) return Collections.emptyMap();
+    public static Map<Damageable, @NotNull Vector> sweep(Location loc, float reach, float size, Quaterniond start, Quaterniond delta, int steps) {
         loc = loc.clone();
+
+        start.normalize();
+        delta.normalize();
 
         final Map<Damageable, Vector> map = new HashMap<>();
         final float halfSize = size / 2;
-        final OrientedBox box = new OrientedBox(
-                BoundingBox.of(loc.clone()
+        final OrientedBox attackBox = new OrientedBox(
+                BoundingBox.of(
+                        loc.clone()
                                 .add(+halfSize, +halfSize, 0),
                         loc.clone()
                                 .add(-halfSize, -halfSize, reach)
-                )
-        )
+                ))
                 .setCenter(loc.toVector())
-                .rotateBy(BlockFace.EAST.getDirection(), Math.toRadians(loc.getPitch()));
+                .rotateBy(start);
 
-        final Collection<Damageable> possible = loc.getNearbyEntitiesByType(Damageable.class, reach);
+        final Map<Damageable, OrientedBox> possible = loc
+                .getNearbyEntitiesByType(Damageable.class, reach)
+                .stream()
+                .collect(HashMap::new, (m, d) -> m.put(d, new OrientedBox(d.getBoundingBox())), HashMap::putAll);
+        final Quaterniond step = new Quaterniond().nlerp(delta, steps <= 1 ? 1 : 1 / (steps - 1d));
+
+        if (steps <= 1)
+            attackBox.rotateBy(step);
 
         for (int i = 0; i < steps; i++) {
+            // TODO separate this to different ticks
+            // TODO don't recreate everytime, create once and use #move if needed
             if (possible.isEmpty()) break;
 
-            box.rotateBy(BlockFace.UP.getDirection(), -Math.toRadians(startYaw + delta / steps * i));
-            box.display(loc.getWorld());
+            attackBox.display(loc.getWorld());
             // TODO efficient expansion of collider?
-            possible.removeIf(e -> {
-                CombatMain.getInstance().debug(e.getName());
-                CombatMain.getInstance().debug(new OrientedBox(e.getBoundingBox()));
-                final Vector mtv = box.collides(new OrientedBox(e.getBoundingBox()));
+            possible.entrySet().removeIf(e -> {
+                final Damageable entity = e.getKey();
+                final OrientedBox entityBox = e.getValue();
+                // TODO also move box
+                CombatMain.getInstance().debug(entity.getName());
+                CombatMain.getInstance().debug(entityBox);
+                final Vector mtv = attackBox.collides(entityBox);
                 if (mtv != null) {
-                    map.put(e, mtv);
+                    map.put(e.getKey(), mtv);
+                    System.out.println("removed");
                     return true;
-                }
-                return false;
+                } else return false;
             });
+            attackBox.rotateBy(step);
         }
 
         return map;
