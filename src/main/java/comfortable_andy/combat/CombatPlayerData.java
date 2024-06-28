@@ -1,5 +1,6 @@
 package comfortable_andy.combat;
 
+import lombok.Getter;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.joml.Vector2f;
@@ -11,6 +12,7 @@ public class CombatPlayerData {
 
     private static final int CACHE_COUNT = 5;
 
+    @Getter
     private final Player player;
 
     /**
@@ -49,10 +51,6 @@ public class CombatPlayerData {
             accumulator.add(lastToCur);
         }
         return accumulator.div(CACHE_COUNT);
-    }
-
-    public Player getPlayer() {
-        return player;
     }
 
 }
