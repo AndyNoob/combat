@@ -28,9 +28,6 @@ public class PlayerUtil {
     public static Map<Damageable, @NotNull Vector> sweep(Supplier<Location> supplier, float reach, float size, Quaterniond start, Quaterniond delta, int steps) {
         Location loc = supplier.get().clone();
 
-        start.normalize();
-        delta.normalize();
-
         final Map<Damageable, Vector> map = new HashMap<>();
         final float halfSize = size / 2;
         final OrientedBox attackBox = new OrientedBox(
