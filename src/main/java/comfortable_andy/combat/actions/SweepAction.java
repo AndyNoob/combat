@@ -14,13 +14,13 @@ import java.util.Map;
 
 import static comfortable_andy.combat.util.VecUtil.fromDir;
 
-@SuppressWarnings("FieldCanBeLocal")
+@SuppressWarnings({"FieldCanBeLocal", "FieldMayBeFinal"})
 @ToString
 public class SweepAction implements IAction {
 
-    private final float windBackRotY = 15;
-    private final float attackRotY = 30;
-    private final int steps = 5;
+    private float windBackRotY = 15;
+    private float attackRotY = 30;
+    private int steps = 5;
 
     @Override
     public ActionResult tryActivate(Player player, CombatPlayerData data, ActionType type) {
