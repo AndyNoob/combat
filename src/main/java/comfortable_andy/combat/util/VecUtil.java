@@ -1,16 +1,12 @@
 package comfortable_andy.combat.util;
 
-import net.minecraft.util.Mth;
 import org.bukkit.Location;
-import org.bukkit.block.BlockFace;
 import org.bukkit.util.Vector;
 import org.joml.Quaterniond;
 import org.joml.Vector2f;
 import org.joml.Vector3d;
 
 import java.text.DecimalFormat;
-
-import static net.minecraft.util.Mth.wrapDegrees;
 
 public class VecUtil {
 
