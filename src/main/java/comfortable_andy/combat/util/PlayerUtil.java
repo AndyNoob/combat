@@ -13,19 +13,20 @@ import org.joml.Quaterniond;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Supplier;
 
 public class PlayerUtil {
 
     /**
-     * @param loc   the origin of the sweep, should be the eye location
+     * @param supplier   the origin of the sweep, should be the eye location
      * @param start the rotation to start the sweep
      * @param delta this added to {@code start}
      * @param steps how many steps
      * @return the hit entities and their minimum translation vector.
      */
     @NotNull
-    public static Map<Damageable, @NotNull Vector> sweep(Location loc, float reach, float size, Quaterniond start, Quaterniond delta, int steps) {
-        loc = loc.clone();
+    public static Map<Damageable, @NotNull Vector> sweep(Supplier<Location> supplier, float reach, float size, Quaterniond start, Quaterniond delta, int steps) {
+        Location loc = supplier.get().clone();
 
         start.normalize();
         delta.normalize();
@@ -42,10 +43,6 @@ public class PlayerUtil {
                 .setCenter(loc.toVector())
                 .rotateBy(start);
 
-        final Map<Damageable, OrientedBox> possible = loc
-                .getNearbyEntitiesByType(Damageable.class, reach)
-                .stream()
-                .collect(HashMap::new, (m, d) -> m.put(d, new OrientedBox(d.getBoundingBox())), HashMap::putAll);
         final Quaterniond step = new Quaterniond().nlerp(delta, steps <= 1 ? 1 : 1 / (steps - 1d));
 
         if (steps <= 1)
@@ -53,15 +50,22 @@ public class PlayerUtil {
 
         for (int i = 0; i < steps; i++) {
             // TODO separate this to different ticks
-            // TODO don't recreate everytime, create once and use #move if needed
-            if (possible.isEmpty()) break;
+            loc = supplier.get();
+            final Map<Damageable, OrientedBox> possible = loc
+                    .getNearbyEntitiesByType(Damageable.class, reach)
+                    .stream()
+                    .filter(e -> !map.containsKey(e))
+                    .collect(HashMap::new, (m, d) -> m.put(d, new OrientedBox(d.getBoundingBox())), HashMap::putAll);
+
+            if (possible.isEmpty()) break; // TODO check this first thing before creating so many oriented boxes
 
             attackBox.display(loc.getWorld());
+
             // TODO efficient expansion of collider?
             possible.entrySet().removeIf(e -> {
                 final Damageable entity = e.getKey();
                 final OrientedBox entityBox = e.getValue();
-                // TODO also move box
+                entityBox.moveBy(entity.getBoundingBox().getCenter().subtract(entityBox.getCenter()));
                 CombatMain.getInstance().debug(entity.getName());
                 CombatMain.getInstance().debug(entityBox);
                 final Vector mtv = attackBox.collides(entityBox);
