@@ -2,7 +2,10 @@ package comfortable_andy.combat.util;
 
 import comfortable_andy.combat.CombatMain;
 import org.bukkit.Location;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.entity.Damageable;
+import org.bukkit.entity.Player;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
@@ -71,6 +74,15 @@ public class PlayerUtil {
         }
 
         return map;
+    }
+
+    public static float getReach(Player player) {
+        return getValueFrom(player.getAttribute(Attribute.PLAYER_ENTITY_INTERACTION_RANGE));
+    }
+
+    private static float getValueFrom(AttributeInstance instance) {
+        if (instance == null) return 0;
+        return (float) instance.getValue();
     }
 
 }

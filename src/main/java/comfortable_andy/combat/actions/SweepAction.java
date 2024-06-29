@@ -5,6 +5,7 @@ import comfortable_andy.combat.util.PlayerUtil;
 import lombok.ToString;
 import org.bukkit.Location;
 import org.bukkit.entity.Damageable;
+import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
 import org.joml.Quaterniond;
 import org.joml.Vector2f;
@@ -22,11 +23,12 @@ public class SweepAction implements IAction {
 
     @Override
     public ActionResult tryActivate(CombatPlayerData data, ActionType type) {
-        if (type != ActionType.ATTACK) return ActionResult.NONE;
         final Vector2f delta = data.averageCameraAngleDelta();
         if (Math.abs(delta.y) <= 8) return ActionResult.NONE;
 
-        final Location origin = data.getPlayer().getEyeLocation();
+        final Player player = data.getPlayer();
+        final Location origin = player.getEyeLocation();
+        // TODO item based reach
         final Quaterniond windBack = fromDir(this.windBackRotY, 0);
         final Quaterniond attack = fromDir(this.attackRotY, 0);
 
@@ -40,8 +42,8 @@ public class SweepAction implements IAction {
         start.mul(windBack);
         for (Map.Entry<Damageable, Vector> entry :
                 PlayerUtil.sweep(
-                        origin,
-                        2,
+                        player::getLocation,
+                        PlayerUtil.getReach(player),
                         1,
                         start,
                         attack,
