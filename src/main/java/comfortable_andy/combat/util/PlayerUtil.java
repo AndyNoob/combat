@@ -15,7 +15,27 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Supplier;
 
+import static comfortable_andy.combat.util.VecUtil.fromDir;
+
 public class PlayerUtil {
+
+    public static void doSweep(Player player, Quaterniond windBack, Quaterniond attack, int steps) {
+        final Quaterniond start = fromDir(player.getEyeLocation());
+        start.mul(windBack);
+        for (Map.Entry<Damageable, Vector> entry :
+                PlayerUtil.sweep(
+                        player::getEyeLocation,
+                        PlayerUtil.getReach(player),
+                        1,
+                        start,
+                        attack,
+                        steps
+                ).entrySet()) {
+            if (entry.getKey() == player) continue;
+            entry.getKey().teleport(entry.getKey().getLocation().add(entry.getValue()));
+            // TODO do damage
+        }
+    }
 
     /**
      * @param supplier   the origin of the sweep, should be the eye location
