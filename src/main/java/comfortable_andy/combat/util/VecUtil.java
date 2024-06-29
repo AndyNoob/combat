@@ -1,12 +1,16 @@
 package comfortable_andy.combat.util;
 
+import net.minecraft.util.Mth;
 import org.bukkit.Location;
+import org.bukkit.block.BlockFace;
 import org.bukkit.util.Vector;
 import org.joml.Quaterniond;
 import org.joml.Vector2f;
 import org.joml.Vector3d;
 
 import java.text.DecimalFormat;
+
+import static net.minecraft.util.Mth.wrapDegrees;
 
 public class VecUtil {
 
@@ -21,7 +25,7 @@ public class VecUtil {
     }
 
     public static Quaterniond fromDir(float rotY, float rotX) {
-        return new Quaterniond().rotateX(Math.toRadians(rotX)).rotateY(-Math.toRadians(rotY));
+        return new Quaterniond().rotationY(-Math.toRadians(rotY)).rotateX(Math.toRadians(rotX));
     }
 
     public static Quaterniond fromDir(Vector2f v) {
