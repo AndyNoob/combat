@@ -52,6 +52,11 @@ public final class CombatMain extends JavaPlugin implements Listener {
         }
     }
 
+    @EventHandler
+    public void onPlayerAttack(PrePlayerAttackEntityEvent e) {
+        e.setCancelled(true);
+    }
+
     public void debug(Object... stuff) {
         if (!debugLog) return;
         getLogger().info(String.join(" ", Arrays.stream(stuff).map(Objects::toString).toArray(String[]::new)));
