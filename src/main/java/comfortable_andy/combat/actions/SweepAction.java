@@ -20,17 +20,17 @@ public class SweepAction implements IAction {
 
     private final float windBackRotY = 15;
     private final float attackRotY = 30;
+    private final int steps = 5;
 
     @Override
-    public ActionResult tryActivate(CombatPlayerData data, ActionType type) {
+    public ActionResult tryActivate(Player player, CombatPlayerData data, ActionType type) {
         final Vector2f delta = data.averageCameraAngleDelta();
         if (Math.abs(delta.y) <= 8) return ActionResult.NONE;
 
-        final Player player = data.getPlayer();
         final Location origin = player.getEyeLocation();
         // TODO item based reach
-        final Quaterniond windBack = fromDir(this.windBackRotY, 0);
-        final Quaterniond attack = fromDir(this.attackRotY, 0);
+        final Quaterniond windBack = new Quaterniond().rotateY(Math.toRadians(this.windBackRotY));
+        final Quaterniond attack = new Quaterniond().rotateY(Math.toRadians(this.attackRotY));
 
         // TODO separate windBack and attack
 
@@ -42,12 +42,12 @@ public class SweepAction implements IAction {
         start.mul(windBack);
         for (Map.Entry<Damageable, Vector> entry :
                 PlayerUtil.sweep(
-                        player::getLocation,
+                        player::getEyeLocation,
                         PlayerUtil.getReach(player),
                         1,
                         start,
                         attack,
-                        5
+                        steps
                 ).entrySet()) {
             if (entry.getKey() == data.getPlayer()) continue;
             entry.getKey().teleport(entry.getKey().getLocation().add(entry.getValue()));
