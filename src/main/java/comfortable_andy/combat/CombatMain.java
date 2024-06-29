@@ -13,6 +13,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
@@ -44,11 +45,15 @@ public final class CombatMain extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
-        if (event.getAction() != Action.LEFT_CLICK_AIR) return;
-        event.setCancelled(true);
+        if (event.getHand() != EquipmentSlot.HAND) return; // interact event fires twice
+        if (event.getAction() != Action.LEFT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_AIR) return;
         final Player player = event.getPlayer();
+        final CombatPlayerData data = getData(player);
         for (IAction action : actions) {
-            if (action.tryActivate(getData(player), IAction.ActionType.ATTACK) == IAction.ActionResult.ACTIVATED) break;
+            if (action.tryActivate(player, data, event.getAction() == Action.LEFT_CLICK_AIR ? IAction.ActionType.ATTACK : IAction.ActionType.INTERACT) == IAction.ActionResult.ACTIVATED) {
+                event.setCancelled(true);
+                break;
+            }
         }
     }
 
