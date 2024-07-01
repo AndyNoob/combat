@@ -10,18 +10,17 @@ import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Quaterniond;
+import org.joml.Vector3d;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Supplier;
 
-import static comfortable_andy.combat.util.VecUtil.fromDir;
+import static comfortable_andy.combat.util.VecUtil.rotateLocal;
 
 public class PlayerUtil {
 
-    public static void doSweep(Player player, Quaterniond windBack, Quaterniond attack, int steps) {
-        final Quaterniond start = fromDir(player.getEyeLocation());
-        start.mul(windBack);
+    public static void doSweep(Player player, Quaterniond start, Vector3d attack, int steps) {
         for (Map.Entry<Damageable, Vector> entry :
                 PlayerUtil.sweep(
                         player::getEyeLocation,
@@ -45,7 +44,7 @@ public class PlayerUtil {
      * @return the hit entities and their minimum translation vector.
      */
     @NotNull
-    public static Map<Damageable, @NotNull Vector> sweep(Supplier<Location> supplier, float reach, float size, Quaterniond start, Quaterniond delta, int steps) {
+    public static Map<Damageable, @NotNull Vector> sweep(Supplier<Location> supplier, float reach, float size, Quaterniond start, Vector3d delta, int steps) {
         Location loc = supplier.get().clone();
 
         final Map<Damageable, Vector> map = new HashMap<>();
@@ -60,21 +59,23 @@ public class PlayerUtil {
                 .setCenter(loc.toVector())
                 .rotateBy(start);
 
-        final Quaterniond step = new Quaterniond().nlerp(delta, steps <= 1 ? 1 : 1 / (steps - 1d));
+        final Vector3d rawStep = delta.mul(steps <= 1 ? 1 : 1 / (steps - 1d));
+        final Quaterniond step = rotateLocal(new Quaterniond(), rawStep, attackBox.getAxis());
 
-        if (steps <= 1)
-            attackBox.rotateBy(step);
+        if (steps <= 1) attackBox.rotateBy(step);
+        final Map<Damageable, OrientedBox> possible = new HashMap<>();
 
         for (int i = 0; i < steps; i++) {
             // TODO separate this to different ticks
             loc = supplier.get();
-            final Map<Damageable, OrientedBox> possible = loc
+             possible.putAll(loc
                     .getNearbyEntitiesByType(Damageable.class, reach)
                     .stream()
-                    .filter(e -> !map.containsKey(e))
-                    .collect(HashMap::new, (m, d) -> m.put(d, new OrientedBox(d.getBoundingBox())), HashMap::putAll);
+                    .filter(e -> !possible.containsKey(e))
+                    .collect(HashMap::new, (m, d) -> m.put(d, new OrientedBox(d.getBoundingBox())), HashMap::putAll)
+             );
 
-            if (possible.isEmpty()) break; // TODO check this first thing before creating so many oriented boxes
+            if (possible.isEmpty()) break;
 
             attackBox.clone().display(loc.getWorld());
 

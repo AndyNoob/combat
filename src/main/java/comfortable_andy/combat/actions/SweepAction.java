@@ -3,14 +3,9 @@ package comfortable_andy.combat.actions;
 import comfortable_andy.combat.CombatPlayerData;
 import comfortable_andy.combat.util.PlayerUtil;
 import lombok.ToString;
-import org.bukkit.Location;
-import org.bukkit.entity.Damageable;
 import org.bukkit.entity.Player;
-import org.bukkit.util.Vector;
-import org.joml.Quaterniond;
 import org.joml.Vector2f;
-
-import java.util.Map;
+import org.joml.Vector3d;
 
 import static comfortable_andy.combat.util.VecUtil.fromDir;
 
@@ -27,32 +22,16 @@ public class SweepAction implements IAction {
         final Vector2f delta = data.averageCameraAngleDelta();
         if (Math.abs(delta.y) <= 8) return ActionResult.NONE;
 
-        final Location origin = player.getEyeLocation();
-        // TODO item based reach
-        final Quaterniond windBack = new Quaterniond().rotateY(Math.toRadians(this.windBackRotY));
-        final Quaterniond attack = new Quaterniond().rotateY(Math.toRadians(this.attackRotY));
+        final Vector3d windBack = new Vector3d(0, windBackRotY, 0);
+        final Vector3d attack = new Vector3d(0, -attackRotY, 0);
 
         // TODO separate windBack and attack
 
         if (delta.y > 0)
-            windBack.invert();
-        else attack.invert();
+            windBack.negate();
+        else attack.negate();
 
-        final Quaterniond start = fromDir(origin);
-        start.mul(windBack);
-        for (Map.Entry<Damageable, Vector> entry :
-                PlayerUtil.sweep(
-                        player::getEyeLocation,
-                        PlayerUtil.getReach(player),
-                        1,
-                        start,
-                        attack,
-                        steps
-                ).entrySet()) {
-            if (entry.getKey() == data.getPlayer()) continue;
-            entry.getKey().teleport(entry.getKey().getLocation().add(entry.getValue()));
-            // TODO do damage
-        }
+        PlayerUtil.doSweep(player, fromDir(player.getEyeLocation()), attack, steps);
         return ActionResult.ACTIVATED;
     }
 
