@@ -1,5 +1,6 @@
 package comfortable_andy.combat;
 
+import comfortable_andy.combat.actions.BashAction;
 import comfortable_andy.combat.actions.IAction;
 import comfortable_andy.combat.actions.SweepAction;
 import io.papermc.paper.event.player.PrePlayerAttackEntityEvent;
@@ -17,6 +18,7 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -76,13 +78,25 @@ public final class CombatMain extends JavaPlugin implements Listener {
     }
 
     public void loadActions() {
-        saveResource("actions/sweep.yml", false);
+        actions.clear();
+        final Path dataPath = getDataFolder().toPath();
+        final File sweepFile = new File(getDataFolder(), "actions/sweep.yml");
+        final File bashFile = new File(getDataFolder(), "actions/bash.yml");
+        saveResource(dataPath.relativize(sweepFile.toPath()).toString(), false);
+        saveResource(dataPath.relativize(bashFile.toPath()).toString(), false);
+        actions.addAll(Arrays.asList(
+                loadAction(sweepFile, SweepAction.class),
+                loadAction(bashFile, BashAction.class)
+        ));
+        getLogger().info("Loaded " + actions);
+    }
+
+    public IAction loadAction(File file, Class<? extends IAction> clazz) {
         try {
-            actions.add(mapable.fromMap(configToMap(YamlConfiguration.loadConfiguration(new File(getDataFolder(), "actions/sweep.yml"))), SweepAction.class));
+            return mapable.fromMap(configToMap(YamlConfiguration.loadConfiguration(file)), clazz);
         } catch (ReflectiveOperationException e) {
             throw new RuntimeException(e);
         }
-        getLogger().info("Loaded " + actions);
     }
 
     @SuppressWarnings("unchecked")
