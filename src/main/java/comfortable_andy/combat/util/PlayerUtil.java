@@ -76,7 +76,7 @@ public class PlayerUtil {
 
             if (possible.isEmpty()) break; // TODO check this first thing before creating so many oriented boxes
 
-            attackBox.display(loc.getWorld());
+            attackBox.clone().display(loc.getWorld());
 
             // TODO efficient expansion of collider?
             possible.entrySet().removeIf(e -> {

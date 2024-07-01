@@ -3,8 +3,10 @@ package comfortable_andy.combat.util;
 import comfortable_andy.combat.CombatMain;
 import lombok.Getter;
 import org.apache.commons.lang.math.DoubleRange;
+import org.bukkit.Color;
 import org.bukkit.Particle;
 import org.bukkit.World;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.Nullable;
@@ -14,16 +16,24 @@ import org.joml.Vector3d;
 
 import java.text.DecimalFormat;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 
 import static comfortable_andy.combat.util.VecUtil.*;
 
-public class OrientedBox {
+public class OrientedBox implements Cloneable {
 
     @Getter
     private Vector center;
-    private final Vector[] vertices = new Vector[8];
+    private Vector[] vertices = new Vector[8];
+    @Getter
     private final Matrix3d axis = new Matrix3d();
+
+    public OrientedBox(OrientedBox b) {
+        this.center = b.center.clone();
+        this.vertices = Arrays.stream(b.vertices).map(Vector::clone).toArray(Vector[]::new);
+        this.axis.set(b.axis);
+    }
 
     public OrientedBox(BoundingBox box) {
         this.center = box.getCenter();
@@ -124,9 +134,40 @@ public class OrientedBox {
     }
 
     public void display(World world) {
-        for (Vector vertex : this.vertices) {
-            world.spawnParticle(Particle.HAPPY_VILLAGER, vertex.toLocation(world), 1, 0, 0, 0);
-        }
+        new BukkitRunnable() {
+            int count = 5;
+
+            @Override
+            public void run() {
+                for (Vector vertex : vertices) {
+                    world.spawnParticle(Particle.HAPPY_VILLAGER, vertex.toLocation(world), 1, 0, 0, 0);
+                }
+                final Iterator<Color> colors = Arrays.asList(Color.RED, Color.GREEN, Color.BLUE).iterator();
+                for (int i = 0; i < 3; i++) {
+                    final Vector3d vector = axis.getColumn(i, new Vector3d());
+                    final Color col = colors.next();
+                    for (int j = 0; j < 5; j++) {
+                        world.spawnParticle(
+                                Particle.DUST,
+                                fromJoml(center.toVector3d().lerp(center.toVector3d().add(vector), j / 5d)).toLocation(world),
+                                1,
+                                0,
+                                0,
+                                0,
+                                0,
+                                new Particle.DustOptions(col, 1)
+                        );
+                    }
+                }
+                if (count-- <= 0) cancel();
+            }
+        }.runTaskTimer(CombatMain.getInstance(), 0, 20);
+    }
+
+    @SuppressWarnings("MethodDoesntCallSuperMethod")
+    @Override
+    public OrientedBox clone() {
+        return new OrientedBox(this);
     }
 
     @Override
