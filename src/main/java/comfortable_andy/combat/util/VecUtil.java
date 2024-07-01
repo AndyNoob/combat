@@ -12,6 +12,7 @@ import java.text.DecimalFormat;
 public class VecUtil {
 
     public static DecimalFormat FORMAT = new DecimalFormat("#.##");
+    public static final Vector ZERO = new Vector(0, 0, 0);
 
     public static Vector3d fromBukkit(Vector v) {
         return new Vector3d(v.getX(), v.getY(), v.getZ());
