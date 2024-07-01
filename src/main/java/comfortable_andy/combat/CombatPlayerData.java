@@ -27,7 +27,7 @@ public class CombatPlayerData {
     public void tick() {
         final Location location = this.player.getLocation();
         this.enterCamera(new Vector2f(location.getPitch(), location.getYaw()));
-        this.player.sendActionBar("delta: " + averageCameraAngleDelta().toString(FORMAT) + " cap: " + this.lastCameraAngles.capacity());
+        this.player.sendActionBar("delta: " + averageCameraAngleDelta().toString(FORMAT) + " cap: " + this.lastCameraAngles.capacity() + " cooldown: " + this.player.getCooldownPeriod());
     }
 
     /**
