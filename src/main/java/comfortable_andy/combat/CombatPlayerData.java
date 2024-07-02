@@ -1,12 +1,16 @@
 package comfortable_andy.combat;
 
+import com.mojang.datafixers.util.Pair;
 import lombok.Getter;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.EquipmentSlot;
 import org.joml.Vector2f;
 
 import java.util.Vector;
 
+import static comfortable_andy.combat.util.ItemUtil.getCd;
+import static comfortable_andy.combat.util.PlayerUtil.getItemLessCd;
 import static comfortable_andy.combat.util.VecUtil.FORMAT;
 
 public class CombatPlayerData {
@@ -20,6 +24,8 @@ public class CombatPlayerData {
      * 1 for each tick that passed
      */
     private final Vector<Vector2f> lastCameraAngles = new Vector<>();
+    private Pair<Long, Long> attackDelayLeft = new Pair<>(0L, 0L);
+
     public CombatPlayerData(Player player) {
         this.player = player;
     }
@@ -27,7 +33,14 @@ public class CombatPlayerData {
     public void tick() {
         final Location location = this.player.getLocation();
         this.enterCamera(new Vector2f(location.getPitch(), location.getYaw()));
-        this.player.sendActionBar("delta: " + averageCameraAngleDelta().toString(FORMAT) + " cap: " + this.lastCameraAngles.capacity() + " cooldown: " + this.player.getCooldownPeriod());
+        this.attackDelayLeft = this.attackDelayLeft.mapFirst(a -> Math.max(0, a - 1)).mapSecond(a -> Math.max(0, a - 1));
+        this.player.sendActionBar("delta: " + averageCameraAngleDelta().toString(FORMAT) +
+                " cap: " + this.lastCameraAngles.capacity() +
+                " cd: " + getItemLessCd(player) +
+                " main cd: " + FORMAT.format(getCd(player.getInventory().getItemInMainHand(), EquipmentSlot.HAND)) +
+                " off cd: " + FORMAT.format(getCd(player.getInventory().getItemInOffHand(), EquipmentSlot.HAND)) +
+                " cd cd: " + attackDelayLeft.toString()
+        );
     }
 
     /**
@@ -39,7 +52,6 @@ public class CombatPlayerData {
     }
 
     /**
-     *
      * @return average camera angle delta from up to the last {@link #CACHE_COUNT} ticks, where x-axis is yaw (rotX) and y-axis is pitch (rotY)
      */
     public Vector2f averageCameraAngleDelta() {
@@ -52,6 +64,14 @@ public class CombatPlayerData {
             accumulator.add(lastToCur);
         }
         return accumulator.div(CACHE_COUNT);
+    }
+
+    public boolean inCooldown(boolean main) {
+        return (main ? this.attackDelayLeft.getFirst() : this.attackDelayLeft.getSecond()) > 0;
+    }
+
+    public void addCooldown(boolean main, long amt) {
+        this.attackDelayLeft = main ? this.attackDelayLeft.mapFirst(a -> amt) : this.attackDelayLeft.mapSecond(a -> amt);
     }
 
 }

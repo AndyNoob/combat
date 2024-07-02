@@ -1,13 +1,18 @@
 package comfortable_andy.combat.util;
 
 import comfortable_andy.combat.CombatMain;
+import net.kyori.adventure.key.Key;
+import net.minecraft.world.item.Item;
 import org.bukkit.Location;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
+import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.entity.Damageable;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
+import org.intellij.lang.annotations.Subst;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Quaterniond;
 import org.joml.Vector3d;
@@ -105,6 +110,20 @@ public class PlayerUtil {
     private static float getValueFrom(AttributeInstance instance) {
         if (instance == null) return 0;
         return (float) instance.getValue();
+    }
+
+    public static double getItemLessCd(Player player) {
+        final AttributeInstance instance = player.getAttribute(Attribute.GENERIC_ATTACK_SPEED);
+        @Subst("minecraft:base_attack_speed") final String itemModKey = Item.BASE_ATTACK_SPEED_ID.toString();
+        final AttributeModifier itemMod = instance.getModifier(Key.key(itemModKey));
+        if (itemMod != null) instance.removeModifier(itemMod);
+        final double val = instance.getValue();
+        if (itemMod != null) instance.addModifier(itemMod);
+        return val;
+    }
+
+    public static double getCd(Player player, EquipmentSlot slot) {
+        return 1 / (getItemLessCd(player) + ItemUtil.getCd(player.getInventory().getItem(slot), EquipmentSlot.HAND)) * 20;
     }
 
 }

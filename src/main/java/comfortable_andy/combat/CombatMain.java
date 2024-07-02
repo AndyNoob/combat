@@ -22,6 +22,9 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static comfortable_andy.combat.util.PlayerUtil.getCd;
+import static org.bukkit.util.NumberConversions.ceil;
+
 public final class CombatMain extends JavaPlugin implements Listener {
 
     private static CombatMain INSTANCE;
@@ -48,20 +51,30 @@ public final class CombatMain extends JavaPlugin implements Listener {
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
         if (event.getHand() != EquipmentSlot.HAND) return; // interact event fires twice
-        if (event.getAction() != Action.LEFT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_AIR) return;
-        final Player player = event.getPlayer();
+        if (event.getAction() == Action.PHYSICAL) return;
+        event.setCancelled(runAction(event.getPlayer(), event.getAction().isLeftClick() ? IAction.ActionType.ATTACK : IAction.ActionType.INTERACT));
+    }
+
+    private boolean runAction(Player player, IAction.ActionType actionType) {
         final CombatPlayerData data = getData(player);
+        final boolean isAttack = actionType == IAction.ActionType.ATTACK;
+        if (data.inCooldown(isAttack)) return false;
         for (IAction action : actions) {
-            if (action.tryActivate(player, data, event.getAction() == Action.LEFT_CLICK_AIR ? IAction.ActionType.ATTACK : IAction.ActionType.INTERACT) == IAction.ActionResult.ACTIVATED) {
-                event.setCancelled(true);
-                break;
+            if (action.tryActivate(player, data, actionType) == IAction.ActionResult.ACTIVATED) {
+                data.addCooldown(
+                        isAttack,
+                        ceil(getCd(player, isAttack ? EquipmentSlot.HAND : EquipmentSlot.OFF_HAND))
+                );
+                return true;
             }
         }
+        return false;
     }
 
     @EventHandler
     public void onPlayerAttack(PrePlayerAttackEntityEvent e) {
         e.setCancelled(true);
+        runAction(e.getPlayer(), IAction.ActionType.ATTACK);
     }
 
     public void debug(Object... stuff) {
