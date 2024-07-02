@@ -28,7 +28,8 @@ public class BashAction implements IAction {
                 player,
                 fromDir(player.getLocation()),
                 new Vector3d(-attackRotX, 0, 0),
-                steps
+                steps,
+                type == ActionType.ATTACK
         );
         return ActionResult.ACTIVATED;
     }

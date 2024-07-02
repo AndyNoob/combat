@@ -31,7 +31,7 @@ public class SweepAction implements IAction {
             windBack.negate();
         else attack.negate();
 
-        PlayerUtil.doSweep(player, fromDir(player.getEyeLocation()), attack, steps);
+        PlayerUtil.doSweep(player, fromDir(player.getEyeLocation()), attack, steps, type == ActionType.ATTACK);
         return ActionResult.ACTIVATED;
     }
 

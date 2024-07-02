@@ -22,10 +22,12 @@ import java.util.Map;
 import java.util.function.Supplier;
 
 import static comfortable_andy.combat.util.VecUtil.rotateLocal;
+import static org.bukkit.util.NumberConversions.ceil;
 
 public class PlayerUtil {
 
-    public static void doSweep(Player player, Quaterniond start, Vector3d attack, int steps) {
+    public static void doSweep(Player player, Quaterniond start, Vector3d attack, int steps, boolean isAttack) {
+        final int ticks = ceil(getCd(player, isAttack ? EquipmentSlot.HAND : EquipmentSlot.OFF_HAND));
         for (Map.Entry<Damageable, Vector> entry :
                 PlayerUtil.sweep(
                         player::getEyeLocation,
@@ -33,7 +35,8 @@ public class PlayerUtil {
                         1,
                         start,
                         attack,
-                        steps
+                        steps,
+                        ceil(ticks / (steps + 0d))
                 ).entrySet()) {
             if (entry.getKey() == player) continue;
             entry.getKey().teleport(entry.getKey().getLocation().add(entry.getValue()));
@@ -49,7 +52,7 @@ public class PlayerUtil {
      * @return the hit entities and their minimum translation vector.
      */
     @NotNull
-    public static Map<Damageable, @NotNull Vector> sweep(Supplier<Location> supplier, float reach, float size, Quaterniond start, Vector3d delta, int steps) {
+    public static Map<Damageable, @NotNull Vector> sweep(Supplier<Location> supplier, float reach, float size, Quaterniond start, Vector3d delta, int steps, int ticksPerStep) {
         Location loc = supplier.get().clone();
 
         final Map<Damageable, Vector> map = new HashMap<>();
