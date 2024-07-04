@@ -2,6 +2,7 @@ package comfortable_andy.combat;
 
 import comfortable_andy.combat.actions.BashAction;
 import comfortable_andy.combat.actions.IAction;
+import comfortable_andy.combat.actions.StabAction;
 import comfortable_andy.combat.actions.SweepAction;
 import io.papermc.paper.event.player.PrePlayerAttackEntityEvent;
 import lombok.Getter;
@@ -99,14 +100,17 @@ public final class CombatMain extends JavaPlugin implements Listener {
         final File bashFile = new File(getDataFolder(), "actions/bash.yml");
         saveResource(dataPath.relativize(sweepFile.toPath()).toString(), false);
         saveResource(dataPath.relativize(bashFile.toPath()).toString(), false);
+        SweepAction sweep = loadAction(sweepFile, SweepAction.class);
+        BashAction bash = loadAction(bashFile, BashAction.class);
         actions.addAll(Arrays.asList(
-                loadAction(sweepFile, SweepAction.class),
-                loadAction(bashFile, BashAction.class)
+                sweep,
+                bash,
+                new StabAction(sweep, bash)
         ));
         getLogger().info("Loaded " + actions);
     }
 
-    public IAction loadAction(File file, Class<? extends IAction> clazz) {
+    public <V extends IAction> V loadAction(File file, Class<V> clazz) {
         try {
             return mapable.fromMap(configToMap(YamlConfiguration.loadConfiguration(file)), clazz);
         } catch (ReflectiveOperationException e) {
