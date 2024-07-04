@@ -13,6 +13,7 @@ import java.util.Vector;
 import static comfortable_andy.combat.util.ItemUtil.getAttribute;
 import static comfortable_andy.combat.util.PlayerUtil.getItemLess;
 import static comfortable_andy.combat.util.VecUtil.FORMAT;
+import static net.minecraft.util.Mth.degreesDifference;
 
 public class CombatPlayerData {
 
@@ -61,7 +62,7 @@ public class CombatPlayerData {
             final Vector2f cur = this.lastCameraAngles.get(i);
             if (cur == null) break;
             final Vector2f last = this.lastCameraAngles.get(i - 1);
-            final Vector2f lastToCur = cur.sub(last, new Vector2f());
+            final Vector2f lastToCur = new Vector2f(degreesDifference(cur.x, last.x), degreesDifference(cur.y, last.y));
             accumulator.add(lastToCur);
         }
         return accumulator.div(CACHE_COUNT);

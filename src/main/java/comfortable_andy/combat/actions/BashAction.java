@@ -20,7 +20,7 @@ public class BashAction implements IAction {
     private int steps = 5;
 
     boolean triggered(Vector2f delta) {
-        return (delta.x < -triggerAmount);
+        return (delta.x > triggerAmount);
     }
 
     @Override
