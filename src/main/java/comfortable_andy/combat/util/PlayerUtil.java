@@ -4,14 +4,17 @@ import comfortable_andy.combat.CombatMain;
 import net.kyori.adventure.key.Key;
 import net.minecraft.world.item.Item;
 import org.bukkit.Location;
+import org.bukkit.Tag;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.damage.DamageSource;
 import org.bukkit.damage.DamageType;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Damageable;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
@@ -35,7 +38,13 @@ public class PlayerUtil {
     public static void doSweep(Player player, Quaterniond start, Vector3d attack, int steps, boolean isAttack) {
         final EquipmentSlot slot = isAttack ? EquipmentSlot.HAND : EquipmentSlot.OFF_HAND;
         final int ticks = ceil(getCd(player, slot));
-        final double damagePerHit = getDmg(player, slot) / steps;
+        final ItemStack item = player.getInventory().getItem(slot);
+        double damage = getDmg(player, slot);
+        final int sharpness = item.getEnchantmentLevel(Enchantment.SHARPNESS);
+        if (sharpness > 0) {
+            damage += 0.5 * sharpness + 0.5;
+        }
+        final double finalDamage = damage;
         PlayerUtil.sweep(
                 player::getEyeLocation,
                 PlayerUtil.getReach(player),
@@ -47,8 +56,17 @@ public class PlayerUtil {
                 (damaged, mtv) -> {
                     if (damaged == player) return;
                     damaged.teleport(damaged.getLocation().add(mtv));
+                    double mod = 0;
+
+                    if (Tag.ENTITY_TYPES_SENSITIVE_TO_SMITE.isTagged(damaged.getType()))
+                        mod += item.getEnchantmentLevel(Enchantment.SMITE) * 2.5;
+                    if (Tag.ENTITY_TYPES_SENSITIVE_TO_BANE_OF_ARTHROPODS.isTagged(damaged.getType()))
+                        mod += item.getEnchantmentLevel(Enchantment.BANE_OF_ARTHROPODS) * 2.5;
+                    if (Tag.ENTITY_TYPES_SENSITIVE_TO_IMPALING.isTagged(damaged.getType()))
+                        mod += item.getEnchantmentLevel(Enchantment.IMPALING) * 2.5;
+
                     damaged.damage(
-                            damagePerHit,
+                            finalDamage + mod / steps,
                             DamageSource
                                     .builder(DamageType.PLAYER_ATTACK)
                                     .withCausingEntity(player)
