@@ -3,14 +3,15 @@ package comfortable_andy.combat;
 import com.mojang.datafixers.util.Pair;
 import lombok.Getter;
 import org.bukkit.Location;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
 import org.joml.Vector2f;
 
 import java.util.Vector;
 
-import static comfortable_andy.combat.util.ItemUtil.getCd;
-import static comfortable_andy.combat.util.PlayerUtil.getItemLessCd;
+import static comfortable_andy.combat.util.ItemUtil.getAttribute;
+import static comfortable_andy.combat.util.PlayerUtil.getItemLess;
 import static comfortable_andy.combat.util.VecUtil.FORMAT;
 
 public class CombatPlayerData {
@@ -36,9 +37,9 @@ public class CombatPlayerData {
         this.attackDelayLeft = this.attackDelayLeft.mapFirst(a -> Math.max(0, a - 1)).mapSecond(a -> Math.max(0, a - 1));
         this.player.sendActionBar("delta: " + averageCameraAngleDelta().toString(FORMAT) +
                 " cap: " + this.lastCameraAngles.capacity() +
-                " cd: " + getItemLessCd(player) +
-                " main cd: " + FORMAT.format(getCd(player.getInventory().getItemInMainHand(), EquipmentSlot.HAND)) +
-                " off cd: " + FORMAT.format(getCd(player.getInventory().getItemInOffHand(), EquipmentSlot.HAND)) +
+                " dmg: " + getItemLess(player, Attribute.GENERIC_ATTACK_DAMAGE/*, Item.BASE_ATTACK_DAMAGE_ID.toString()*/) +
+                " main dmg: " + FORMAT.format(getAttribute(player.getInventory().getItemInMainHand(), EquipmentSlot.HAND, Attribute.GENERIC_ATTACK_DAMAGE)) +
+                " off dmg: " + FORMAT.format(getAttribute(player.getInventory().getItemInOffHand(), EquipmentSlot.HAND, Attribute.GENERIC_ATTACK_DAMAGE)) +
                 " cd cd: " + attackDelayLeft.toString()
         );
     }
