@@ -4,6 +4,7 @@ import comfortable_andy.combat.CombatPlayerData;
 import comfortable_andy.combat.util.PlayerUtil;
 import lombok.ToString;
 import org.bukkit.entity.Player;
+import org.joml.Quaterniond;
 import org.joml.Vector2f;
 import org.joml.Vector3d;
 
@@ -31,8 +32,8 @@ public class BashAction implements IAction {
 
         PlayerUtil.doSweep(
                 player,
-                fromDir(player.getLocation()),
-                new Vector3d(-attackRotX, 0, 0),
+                fromDir(player.getLocation()).mul(new Quaterniond().rotateX(-Math.toRadians(windBackRotX))),
+                new Vector3d(attackRotX, 0, 0),
                 steps,
                 type == ActionType.ATTACK
         );
