@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.Setter;
 import me.comfortable_andy.mapable.Mapable;
 import me.comfortable_andy.mapable.MapableBuilder;
+import org.bukkit.GameMode;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -56,6 +57,7 @@ public final class CombatMain extends JavaPlugin implements Listener {
     }
 
     private boolean runAction(Player player, IAction.ActionType actionType) {
+        if (player.getGameMode() == GameMode.SPECTATOR) return false;
         final CombatPlayerData data = getData(player);
         final boolean isAttack = actionType == IAction.ActionType.ATTACK;
         if (data.inCooldown(isAttack)) return false;
