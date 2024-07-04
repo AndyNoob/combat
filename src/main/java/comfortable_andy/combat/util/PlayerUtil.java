@@ -17,7 +17,9 @@ import org.jetbrains.annotations.NotNull;
 import org.joml.Quaterniond;
 import org.joml.Vector3d;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
@@ -115,18 +117,28 @@ public class PlayerUtil {
         return (float) instance.getValue();
     }
 
-    public static double getItemLessCd(Player player) {
-        final AttributeInstance instance = player.getAttribute(Attribute.GENERIC_ATTACK_SPEED);
-        @Subst("minecraft:base_attack_speed") final String itemModKey = Item.BASE_ATTACK_SPEED_ID.toString();
-        final AttributeModifier itemMod = instance.getModifier(Key.key(itemModKey));
-        if (itemMod != null) instance.removeModifier(itemMod);
+    @SuppressWarnings("DataFlowIssue")
+    public static double getItemLess(Player player, Attribute attribute, String... modKeys) {
+        final AttributeInstance instance = player.getAttribute(attribute);
+        final List<AttributeModifier> mods = new ArrayList<>();
+        for (@Subst("minecraft:base_attack_speed") String itemModKey : modKeys) {
+            final AttributeModifier itemMod = instance.getModifier(Key.key(itemModKey));
+            if (itemMod != null) {
+                instance.removeModifier(itemMod);
+                mods.add(itemMod);
+            }
+        }
         final double val = instance.getValue();
-        if (itemMod != null) instance.addModifier(itemMod);
+        for (AttributeModifier mod : mods) instance.addModifier(mod);
         return val;
     }
 
     public static double getCd(Player player, EquipmentSlot slot) {
-        return 1 / (getItemLessCd(player) + ItemUtil.getCd(player.getInventory().getItem(slot), EquipmentSlot.HAND)) * 20;
+        return 1 / (getItemLess(player, Attribute.GENERIC_ATTACK_SPEED, Item.BASE_ATTACK_SPEED_ID.toString()) + ItemUtil.getAttribute(player.getInventory().getItem(slot), EquipmentSlot.HAND, Attribute.GENERIC_ATTACK_SPEED)) * 20;
+    }
+
+    public static double getDmg(Player player, EquipmentSlot slot) {
+        return getItemLess(player, Attribute.GENERIC_ATTACK_DAMAGE, Item.BASE_ATTACK_DAMAGE_ID.toString()) + ItemUtil.getAttribute(player.getInventory().getItem(slot), EquipmentSlot.HAND, Attribute.GENERIC_ATTACK_DAMAGE);
     }
 
 }

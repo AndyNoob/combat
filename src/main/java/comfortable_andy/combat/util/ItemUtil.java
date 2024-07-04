@@ -14,16 +14,16 @@ public class ItemUtil {
     /**
      * @see AttributeInstance#calculateValue()
      */
-    public static double getCd(ItemStack item, EquipmentSlot slot) {
+    public static double getAttribute(ItemStack item, EquipmentSlot slot, Attribute attribute) {
         final Material material = item.getType();
         // all the modifiers here should all be add_value
-        double d = material.getDefaultAttributeModifiers(slot).get(Attribute.GENERIC_ATTACK_SPEED)
+        double d = material.getDefaultAttributeModifiers(slot).get(attribute)
                 .stream()
                 .mapToDouble(AttributeModifier::getAmount).sum();
 
         if (!item.hasItemMeta()) return d;
 
-        final Collection<AttributeModifier> modifiers = item.getItemMeta().getAttributeModifiers(slot).get(Attribute.GENERIC_ATTACK_SPEED);
+        final Collection<AttributeModifier> modifiers = item.getItemMeta().getAttributeModifiers(slot).get(attribute);
 
         // copied from net.minecraft.world.entity.ai.attributes.AttributeInstance#calculateValue
         for (AttributeModifier mod : modifiers.stream().filter(a -> a.getOperation() == AttributeModifier.Operation.ADD_NUMBER).toList()) {
