@@ -13,14 +13,19 @@ import static comfortable_andy.combat.util.VecUtil.fromDir;
 @ToString
 public class SweepAction implements IAction {
 
+    float triggerAmount = 8;
     private float windBackRotY = 15;
     private float attackRotY = 30;
     private int steps = 5;
 
+    boolean triggered(Vector2f delta) {
+        return Math.abs(delta.y) > triggerAmount;
+    }
+
     @Override
     public ActionResult tryActivate(Player player, CombatPlayerData data, ActionType type) {
         final Vector2f delta = data.averageCameraAngleDelta();
-        if (Math.abs(delta.y) <= 8) return ActionResult.NONE;
+        if (!triggered(delta)) return ActionResult.NONE;
 
         final Vector3d windBack = new Vector3d(0, windBackRotY, 0);
         final Vector3d attack = new Vector3d(0, -attackRotY, 0);

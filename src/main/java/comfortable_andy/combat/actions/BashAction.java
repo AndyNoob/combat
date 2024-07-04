@@ -13,14 +13,19 @@ import static comfortable_andy.combat.util.VecUtil.fromDir;
 @ToString
 public class BashAction implements IAction {
 
+    float triggerAmount = 8;
     private float windBackRotX = 15;
     private float attackRotX = 30;
     private int steps = 5;
 
+    boolean triggered(Vector2f delta) {
+        return (delta.x < -triggerAmount);
+    }
+
     @Override
     public ActionResult tryActivate(Player player, CombatPlayerData data, ActionType type) {
         final Vector2f delta = data.averageCameraAngleDelta();
-        if (delta.x >= -8) return ActionResult.NONE;
+        if (!triggered(delta)) return ActionResult.NONE;
 
         // TODO separate windBack and attack
 
