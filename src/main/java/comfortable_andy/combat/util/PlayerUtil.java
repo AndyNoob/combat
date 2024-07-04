@@ -7,13 +7,15 @@ import org.bukkit.Location;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
+import org.bukkit.damage.DamageSource;
+import org.bukkit.damage.DamageType;
 import org.bukkit.entity.Damageable;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import org.intellij.lang.annotations.Subst;
-import org.jetbrains.annotations.NotNull;
 import org.joml.Quaterniond;
 import org.joml.Vector3d;
 
@@ -21,6 +23,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
 import static comfortable_andy.combat.util.VecUtil.rotateLocal;
@@ -28,36 +31,43 @@ import static org.bukkit.util.NumberConversions.ceil;
 
 public class PlayerUtil {
 
+    @SuppressWarnings("UnstableApiUsage")
     public static void doSweep(Player player, Quaterniond start, Vector3d attack, int steps, boolean isAttack) {
-        final int ticks = ceil(getCd(player, isAttack ? EquipmentSlot.HAND : EquipmentSlot.OFF_HAND));
-        for (Map.Entry<Damageable, Vector> entry :
-                PlayerUtil.sweep(
-                        player::getEyeLocation,
-                        PlayerUtil.getReach(player),
-                        1,
-                        start,
-                        attack,
-                        steps,
-                        ceil(ticks / (steps + 0d))
-                ).entrySet()) {
-            if (entry.getKey() == player) continue;
-            entry.getKey().teleport(entry.getKey().getLocation().add(entry.getValue()));
-            // TODO do damage
-        }
+        final EquipmentSlot slot = isAttack ? EquipmentSlot.HAND : EquipmentSlot.OFF_HAND;
+        final int ticks = ceil(getCd(player, slot));
+        final double damagePerHit = getDmg(player, slot) / steps;
+        PlayerUtil.sweep(
+                player::getEyeLocation,
+                PlayerUtil.getReach(player),
+                1,
+                start,
+                attack,
+                steps,
+                ceil(ticks / (steps + 0d)),
+                (damaged, mtv) -> {
+                    if (damaged == player) return;
+                    damaged.teleport(damaged.getLocation().add(mtv));
+                    damaged.damage(
+                            damagePerHit,
+                            DamageSource
+                                    .builder(DamageType.PLAYER_ATTACK)
+                                    .withCausingEntity(player)
+                                    .withDirectEntity(player)
+                                    .build()
+                    );
+                }
+        );
     }
 
     /**
-     * @param supplier   the origin of the sweep, should be the eye location
-     * @param start the rotation to start the sweep
-     * @param delta this added to {@code start}
-     * @param steps how many steps
-     * @return the hit entities and their minimum translation vector.
+     * @param supplier the origin of the sweep, should be the eye location
+     * @param start    the rotation to start the sweep
+     * @param delta    this added to {@code start}
+     * @param steps    how many steps
      */
-    @NotNull
-    public static Map<Damageable, @NotNull Vector> sweep(Supplier<Location> supplier, float reach, float size, Quaterniond start, Vector3d delta, int steps, int ticksPerStep) {
+    public static void sweep(Supplier<Location> supplier, float reach, float size, Quaterniond start, Vector3d delta, int steps, int ticksPerStep, BiConsumer<Damageable, Vector> callback) {
         Location loc = supplier.get().clone();
 
-        final Map<Damageable, Vector> map = new HashMap<>();
         final float halfSize = size / 2;
         final OrientedBox attackBox = new OrientedBox(
                 BoundingBox.of(
@@ -75,37 +85,40 @@ public class PlayerUtil {
         if (steps <= 1) attackBox.rotateBy(step);
         final Map<Damageable, OrientedBox> possible = new HashMap<>();
 
-        for (int i = 0; i < steps; i++) {
-            // TODO separate this to different ticks
-            loc = supplier.get();
-             possible.putAll(loc
-                    .getNearbyEntitiesByType(Damageable.class, reach)
-                    .stream()
-                    .filter(e -> !possible.containsKey(e))
-                    .collect(HashMap::new, (m, d) -> m.put(d, new OrientedBox(d.getBoundingBox())), HashMap::putAll)
-             );
+        new BukkitRunnable() {
+            int stepsLeft = steps;
 
-            if (possible.isEmpty()) break;
+            public void run() {
+                // TODO separate this to different ticks
+                Location loc = supplier.get();
+                possible.putAll(loc
+                        .getNearbyEntitiesByType(Damageable.class, reach)
+                        .stream()
+                        .filter(e -> !possible.containsKey(e))
+                        .collect(HashMap::new, (m, d) -> m.put(d, new OrientedBox(d.getBoundingBox())), HashMap::putAll)
+                );
 
-            attackBox.clone().display(loc.getWorld());
+                if (possible.isEmpty()) return;
 
-            // TODO efficient expansion of collider?
-            possible.entrySet().removeIf(e -> {
-                final Damageable entity = e.getKey();
-                final OrientedBox entityBox = e.getValue();
-                entityBox.moveBy(entity.getBoundingBox().getCenter().subtract(entityBox.getCenter()));
-                CombatMain.getInstance().debug(entity.getName());
-                CombatMain.getInstance().debug(entityBox);
-                final Vector mtv = attackBox.collides(entityBox);
-                if (mtv != null) {
-                    map.put(e.getKey(), mtv);
-                    return true;
-                } else return false;
-            });
-            attackBox.rotateBy(step);
-        }
+                attackBox.clone().display(loc.getWorld());
 
-        return map;
+                // TODO efficient expansion of collider?
+                possible.entrySet().removeIf(e -> {
+                    final Damageable entity = e.getKey();
+                    final OrientedBox entityBox = e.getValue();
+                    entityBox.moveBy(entity.getBoundingBox().getCenter().subtract(entityBox.getCenter()));
+                    CombatMain.getInstance().debug(entity.getName());
+                    CombatMain.getInstance().debug(entityBox);
+                    final Vector mtv = attackBox.collides(entityBox);
+                    if (mtv != null) {
+                        callback.accept(entity, mtv);
+                        return true;
+                    } else return false;
+                });
+                attackBox.rotateBy(step);
+                if (stepsLeft-- <= 0) cancel();
+            }
+        }.runTaskTimer(CombatMain.getInstance(), 0, ticksPerStep);
     }
 
     public static float getReach(Player player) {
