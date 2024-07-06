@@ -1,4 +1,5 @@
 triggerAmount: 8
 windBackRotX: 30
 attackRotX: 30
+speedMultiplier: 0.8
 steps: 5

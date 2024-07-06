@@ -22,7 +22,14 @@ public class StabAction implements IAction {
     public ActionResult tryActivate(Player player, CombatPlayerData data, ActionType type) {
         final Vector2f delta = data.averageCameraAngleDelta();
         if (sweep.triggered(delta) || bash.triggered(delta)) return ActionResult.NONE;
-        PlayerUtil.doSweep(player, fromDir(player.getLocation()), new Vector3d(), 1, type == ActionType.ATTACK);
+        PlayerUtil.doSweep(
+                player,
+                fromDir(player.getLocation()),
+                new Vector3d(),
+                1,
+                type == ActionType.ATTACK,
+                1
+        );
         return null;
     }
 }

@@ -35,9 +35,9 @@ import static org.bukkit.util.NumberConversions.ceil;
 public class PlayerUtil {
 
     @SuppressWarnings("UnstableApiUsage")
-    public static void doSweep(Player player, Quaterniond start, Vector3d attack, int steps, boolean isAttack) {
+    public static void doSweep(Player player, Quaterniond start, Vector3d attack, int steps, boolean isAttack, float speedMod) {
         final EquipmentSlot slot = isAttack ? EquipmentSlot.HAND : EquipmentSlot.OFF_HAND;
-        final int ticks = ceil(getCd(player, slot));
+        final int ticks = ceil(getCd(player, slot) * speedMod);
         final ItemStack item = player.getInventory().getItem(slot);
         double damage = getDmg(player, slot);
         final int sharpness = item.getEnchantmentLevel(Enchantment.SHARPNESS);

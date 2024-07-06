@@ -17,6 +17,7 @@ public class SweepAction implements IAction {
     float triggerAmount = 8;
     private float windBackRotY = 15;
     private float attackRotY = 30;
+    private float speedMultiplier = 0.25f;
     private int steps = 5;
 
     boolean triggered(Vector2f delta) {
@@ -38,7 +39,7 @@ public class SweepAction implements IAction {
             attack.negate();
         }
 
-        PlayerUtil.doSweep(player, fromDir(player.getEyeLocation()).mul(new Quaterniond().rotateY(Math.toRadians(windBack.y))), attack, steps, type == ActionType.ATTACK);
+        PlayerUtil.doSweep(player, fromDir(player.getEyeLocation()).mul(new Quaterniond().rotateY(Math.toRadians(windBack.y))), attack, steps, type == ActionType.ATTACK, speedMultiplier);
         return ActionResult.ACTIVATED;
     }
 

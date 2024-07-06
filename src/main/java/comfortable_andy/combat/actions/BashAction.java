@@ -17,6 +17,7 @@ public class BashAction implements IAction {
     float triggerAmount = 8;
     private float windBackRotX = 15;
     private float attackRotX = 30;
+    private float speedMultiplier = 0.8f;
     private int steps = 5;
 
     boolean triggered(Vector2f delta) {
@@ -35,7 +36,8 @@ public class BashAction implements IAction {
                 fromDir(player.getLocation()).mul(new Quaterniond().rotateX(-Math.toRadians(windBackRotX))),
                 new Vector3d(attackRotX, 0, 0),
                 steps,
-                type == ActionType.ATTACK
+                type == ActionType.ATTACK,
+                speedMultiplier
         );
         return ActionResult.ACTIVATED;
     }
