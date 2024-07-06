@@ -1,5 +1,6 @@
-triggerAmount: 8
-windBackRotY: 15
-attackRotY: 30
+triggerAmount: 8 # degrees (left-right)
+windBackRotY: 15 # degrees (left-right)
+attackRotY: 30 # degrees (left-right)
+# if the attack speed converted to ticks is 12, the step per tick ends up being ceil(ticks * multiplier) / steps
 speedMultiplier: 0.25
-steps: 5
+steps: 5 # how many collision checks
