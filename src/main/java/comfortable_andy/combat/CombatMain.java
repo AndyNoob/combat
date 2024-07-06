@@ -105,7 +105,7 @@ public final class CombatMain extends JavaPlugin implements Listener {
         actions.addAll(Arrays.asList(
                 sweep,
                 bash,
-                new StabAction(sweep, bash)
+                new StabAction()
         ));
         getLogger().info("Loaded " + actions);
     }
