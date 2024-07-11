@@ -24,6 +24,7 @@ public class SweepAction implements IAction {
     private float windBackRotY = 15;
     private float attackRotY = 30;
     private float speedMultiplier = 0.25f;
+    private float damageMultiplierPerStep = 1.2f;
     private int steps = 5;
     private List<Material> blacklist = List.of(Material.BOW, Material.CROSSBOW);
 
@@ -56,7 +57,8 @@ public class SweepAction implements IAction {
                 attack,
                 steps,
                 isAttack,
-                speedMultiplier
+                speedMultiplier,
+                damageMultiplierPerStep
         );
         return ActionResult.ACTIVATED;
     }

@@ -17,6 +17,7 @@ public class StabAction implements IAction {
                 new Vector3d(),
                 1,
                 type == ActionType.ATTACK,
+                1,
                 1
         );
         return null;

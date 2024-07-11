@@ -25,6 +25,7 @@ public class BashAction implements IAction {
     private float attackRotX = 30;
     private float speedMultiplier = 0.8f;
     private int steps = 5;
+    private float damageMultiplierPerStep = 1.2f;
     private List<Material> blacklist = List.of(Material.BOW, Material.CROSSBOW);
 
     boolean triggered(Vector2f delta) {
@@ -48,7 +49,8 @@ public class BashAction implements IAction {
                 new Vector3d(attackRotX, 0, 0),
                 steps,
                 isAttack,
-                speedMultiplier
+                speedMultiplier,
+                damageMultiplierPerStep
         );
         return ActionResult.ACTIVATED;
     }
