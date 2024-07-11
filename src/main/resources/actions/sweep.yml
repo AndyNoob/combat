@@ -4,3 +4,7 @@ attackRotY: 30 # degrees (left-right)
 # if the attack speed converted to ticks is 12, the step per tick ends up being ceil(ticks * multiplier) / steps
 speedMultiplier: 0.25
 steps: 5 # how many collision checks
+# see https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Material.html#enum-constant-summary
+blacklist:
+  - BOW
+  - CROSSBOW

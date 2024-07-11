@@ -3,10 +3,16 @@ package comfortable_andy.combat.actions;
 import comfortable_andy.combat.CombatPlayerData;
 import comfortable_andy.combat.util.PlayerUtil;
 import lombok.ToString;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.ItemStack;
 import org.joml.Quaterniond;
 import org.joml.Vector2f;
 import org.joml.Vector3d;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static comfortable_andy.combat.util.VecUtil.fromDir;
 
@@ -19,6 +25,7 @@ public class SweepAction implements IAction {
     private float attackRotY = 30;
     private float speedMultiplier = 0.25f;
     private int steps = 5;
+    private List<Material> blacklist = List.of(Material.BOW, Material.CROSSBOW);
 
     boolean triggered(Vector2f delta) {
         return Math.abs(delta.y) > triggerAmount;
@@ -26,6 +33,10 @@ public class SweepAction implements IAction {
 
     @Override
     public ActionResult tryActivate(Player player, CombatPlayerData data, ActionType type) {
+        boolean isAttack = type == ActionType.ATTACK;
+        ItemStack heldItem = player.getInventory().getItem(isAttack ? EquipmentSlot.HAND : EquipmentSlot.OFF_HAND);
+        if (blacklist.contains(heldItem.getType()))
+            return ActionResult.NONE;
         final Vector2f delta = data.averageCameraAngleDelta();
         if (!triggered(delta)) return ActionResult.NONE;
 
@@ -39,7 +50,14 @@ public class SweepAction implements IAction {
             attack.negate();
         }
 
-        PlayerUtil.doSweep(player, fromDir(player.getEyeLocation()).mul(new Quaterniond().rotateY(Math.toRadians(windBack.y))), attack, steps, type == ActionType.ATTACK, speedMultiplier);
+        PlayerUtil.doSweep(
+                player,
+                fromDir(player.getEyeLocation()).mul(new Quaterniond().rotateY(Math.toRadians(windBack.y))),
+                attack,
+                steps,
+                isAttack,
+                speedMultiplier
+        );
         return ActionResult.ACTIVATED;
     }
 
