@@ -109,6 +109,7 @@ public class PlayerUtil {
             public void run() {
                 // TODO separate this to different ticks
                 Location loc = supplier.get();
+                Vector direction = loc.getDirection();
                 possible.putAll(loc
                         .getNearbyEntitiesByType(Damageable.class, reach)
                         .stream()
@@ -127,9 +128,10 @@ public class PlayerUtil {
                     entityBox.moveBy(entity.getBoundingBox().getCenter().subtract(entityBox.getCenter()));
                     CombatMain.getInstance().debug(entity.getName());
                     CombatMain.getInstance().debug(entityBox);
-                    final Vector mtv = attackBox.collides(entityBox);
+                    final Vector mtv = attackBox.collides(entityBox, Comparator.comparingDouble(direction::dot).reversed())
+                            .stream().filter(v -> direction.dot(v) > 0).findFirst().orElse(null);
                     if (mtv != null) {
-                        callback.accept(entity, mtv);
+                        callback.accept(entity, mtv.normalize());
                         return true;
                     } else return false;
                 });

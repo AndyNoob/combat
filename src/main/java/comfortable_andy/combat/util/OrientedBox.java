@@ -9,15 +9,13 @@ import org.bukkit.World;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
-import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix3d;
 import org.joml.Quaterniondc;
 import org.joml.Vector3d;
 
 import java.text.DecimalFormat;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 import static comfortable_andy.combat.util.VecUtil.*;
 
@@ -84,15 +82,15 @@ public class OrientedBox implements Cloneable {
         return new DoubleRange(min, max);
     }
 
-    @Nullable
-    public Vector collides(OrientedBox other) {
-        Vector mtv = null;
+    @NotNull
+    public List<Vector> collides(OrientedBox other, Comparator<Vector> comparator) {
+        final List<Vector> options = new ArrayList<>();
         for (int i = 0; i < 6; i++) {
             final Vector axis = fromJoml((i <= 2 ? this : other).axis.getColumn(i % 3, new Vector3d()));
             final DoubleRange thisRange = this.project(axis);
             final DoubleRange otherRange = other.project(axis);
 
-            if (!thisRange.overlapsRange(otherRange)) return null;
+            if (!thisRange.overlapsRange(otherRange)) return new ArrayList<>();
 
             final List<Double> vals = Arrays.asList(
                     thisRange.getMinimumDouble(),
@@ -125,12 +123,10 @@ public class OrientedBox implements Cloneable {
             CombatMain.getInstance().debug("multi -- " + multi);
             CombatMain.getInstance().debug("candidate -- " + mtvCandidate.toVector3f().toString(new DecimalFormat("#.##")));
 
-            if (mtv == null || mtv.lengthSquared() > mtvCandidate.lengthSquared()) {
-                mtv = mtvCandidate;
-                CombatMain.getInstance().debug("     candidate selected");
-            }
+            options.add(mtvCandidate);
         }
-        return mtv;
+        options.sort(comparator);
+        return options;
     }
 
     public void display(World world) {
