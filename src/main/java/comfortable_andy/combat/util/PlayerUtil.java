@@ -55,7 +55,7 @@ public class PlayerUtil {
                 ceil(ticks / (steps + 0d)),
                 (damaged, mtv) -> {
                     if (damaged == player) return;
-                    damaged.teleport(damaged.getLocation().add(mtv));
+                    damaged.setVelocity(damaged.getVelocity().add(mtv));
                     double mod = 0;
 
                     if (Tag.ENTITY_TYPES_SENSITIVE_TO_SMITE.isTagged(damaged.getType()))
