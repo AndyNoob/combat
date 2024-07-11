@@ -61,10 +61,15 @@ public final class CombatMain extends JavaPlugin implements Listener {
                 && getConfig().getStringList("left-click-blacklist").contains(mainHand)) {
             return;
         }
-        if (event.getAction().isRightClick()
-                && (getConfig().getStringList("right-click-blacklist").contains(mainHand)
-                || getConfig().getStringList("right-click-blacklist").contains(offHand))) {
-            return;
+        if (event.getAction().isRightClick()) {
+            if (getConfig().getBoolean("block-food-right-click", true)
+                    && event.getItem() != null && event.getItem().getType().isEdible()) {
+                return;
+            }
+            if (getConfig().getStringList("right-click-blacklist").contains(mainHand)
+                    || getConfig().getStringList("right-click-blacklist").contains(offHand)) {
+                return;
+            }
         }
         event.setCancelled(runAction(event.getPlayer(), event.getAction().isLeftClick() ? IAction.ActionType.ATTACK : IAction.ActionType.INTERACT));
     }

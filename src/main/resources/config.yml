@@ -4,3 +4,4 @@ left-click-blacklist: []
 right-click-blacklist:
   - BOW
   - CROSSBOW
+block-food-right-click: true
