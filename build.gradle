@@ -65,6 +65,9 @@ shadowJar {
 }
 
 runServer {
-    jvmArgs("-Xms1G")
-    jvmArgs("-Xmx1G")
+    jvmArgs("-Xms512m", "-Xmx512m")
+    downloadPlugins {
+        url("https://github.com/ViaVersion/ViaVersion/releases/download/5.0.1/ViaVersion-5.0.1.jar")
+        url("https://github.com/ViaVersion/ViaBackwards/releases/download/5.0.1/ViaBackwards-5.0.1.jar")
+    }
 }
