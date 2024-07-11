@@ -22,10 +22,7 @@ import org.intellij.lang.annotations.Subst;
 import org.joml.Quaterniond;
 import org.joml.Vector3d;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
@@ -123,6 +120,7 @@ public class PlayerUtil {
 
                 // TODO efficient expansion of collider?
                 possible.entrySet().removeIf(e -> {
+                    if (stepsLeft-- <= 0) cancel();
                     final Damageable entity = e.getKey();
                     final OrientedBox entityBox = e.getValue();
                     entityBox.moveBy(entity.getBoundingBox().getCenter().subtract(entityBox.getCenter()));
@@ -136,7 +134,6 @@ public class PlayerUtil {
                     } else return false;
                 });
                 attackBox.rotateBy(step);
-                if (stepsLeft-- <= 0) cancel();
             }
         }.runTaskTimer(CombatMain.getInstance(), 0, ticksPerStep);
     }
