@@ -4,6 +4,7 @@ import comfortable_andy.combat.CombatPlayerData;
 import comfortable_andy.combat.util.PlayerUtil;
 import lombok.ToString;
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.NotNull;
 import org.joml.Vector3d;
 
 import static comfortable_andy.combat.util.VecUtil.fromDir;
@@ -12,7 +13,7 @@ import static comfortable_andy.combat.util.VecUtil.fromDir;
 public class StabAction implements IAction {
 
     @Override
-    public ActionResult tryActivate(Player player, CombatPlayerData data, ActionType type) {
+    public @NotNull ActionResult tryActivate(Player player, CombatPlayerData data, ActionType type) {
         PlayerUtil.doSweep(
                 player,
                 fromDir(player.getLocation()),
@@ -22,6 +23,6 @@ public class StabAction implements IAction {
                 1,
                 1
         );
-        return null;
+        return ActionResult.ACTIVATED;
     }
 }
