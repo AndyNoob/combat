@@ -2,11 +2,13 @@ package comfortable_andy.combat.actions;
 
 import comfortable_andy.combat.CombatPlayerData;
 import comfortable_andy.combat.util.PlayerUtil;
+import lombok.ToString;
 import org.bukkit.entity.Player;
 import org.joml.Vector3d;
 
 import static comfortable_andy.combat.util.VecUtil.fromDir;
 
+@ToString
 public class StabAction implements IAction {
 
     @Override
