@@ -1,0 +1,6 @@
+# see https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Material.html#enum-constant-summary
+left-click-blacklist: []
+# see https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Material.html#enum-constant-summary
+right-click-blacklist:
+  - BOW
+  - CROSSBOW

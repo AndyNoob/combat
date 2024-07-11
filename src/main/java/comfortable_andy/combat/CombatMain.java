@@ -41,6 +41,7 @@ public final class CombatMain extends JavaPlugin implements Listener {
     @Override
     public void onEnable() {
         INSTANCE = this;
+        saveDefaultConfig();
         loadActions();
         new CombatRunnable().runTaskTimer(this, 0, 1);
         getServer().getPluginManager().registerEvents(this, this);
@@ -54,6 +55,17 @@ public final class CombatMain extends JavaPlugin implements Listener {
     public void onPlayerInteract(PlayerInteractEvent event) {
         if (event.getHand() != EquipmentSlot.HAND) return; // interact event fires twice
         if (event.getAction() == Action.PHYSICAL) return;
+        final String mainHand = event.getPlayer().getInventory().getItemInMainHand().getType().toString();
+        final String offHand = event.getPlayer().getInventory().getItemInOffHand().getType().toString();
+        if (event.getAction().isLeftClick()
+                && getConfig().getStringList("left-click-blacklist").contains(mainHand)) {
+            return;
+        }
+        if (event.getAction().isRightClick()
+                && (getConfig().getStringList("right-click-blacklist").contains(mainHand)
+                || getConfig().getStringList("right-click-blacklist").contains(offHand))) {
+            return;
+        }
         event.setCancelled(runAction(event.getPlayer(), event.getAction().isLeftClick() ? IAction.ActionType.ATTACK : IAction.ActionType.INTERACT));
     }
 
