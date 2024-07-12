@@ -58,6 +58,7 @@ public class PlayerUtil {
                 ceil(ticks / (steps + 0d)),
                 (damaged, mtv) -> {
                     if (damaged == player) return;
+                    if (!player.hasLineOfSight(damaged)) return;
                     if (knockBack > 0 && damaged instanceof LivingEntity e) {
                         if (!((CraftWorld) player.getWorld()).getHandle().paperConfig().misc.disableSprintInterruptionOnAttack)
                             player.setSprinting(false);
