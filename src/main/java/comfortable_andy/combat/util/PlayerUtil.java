@@ -138,7 +138,10 @@ public class PlayerUtil {
             int stepsLeft = steps;
 
             public void run() {
-                // TODO separate this to different ticks
+                if (stepsLeft-- <= 0) {
+                    cancel();
+                    return;
+                }
                 Location loc = supplier.get();
                 Vector direction = loc.getDirection();
                 possible.putAll(loc
@@ -154,7 +157,6 @@ public class PlayerUtil {
 
                 // TODO efficient expansion of collider?
                 possible.entrySet().removeIf(e -> {
-                    if (stepsLeft-- <= 0) cancel();
                     final Damageable entity = e.getKey();
                     final OrientedBox entityBox = e.getValue();
                     entityBox.moveBy(entity.getBoundingBox().getCenter().subtract(entityBox.getCenter()));
