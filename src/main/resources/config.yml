@@ -4,4 +4,17 @@ left-click-blacklist: []
 right-click-blacklist:
   - BOW
   - CROSSBOW
+  - EGG
+  - SNOWBALL
+  - FIRE_CHARGE
+  - POTION
+  - SPLASH_POTION
+  - LINGERING_POTION
+  - HONEY_BOTTLE
+  - OMINOUS_BOTTLE
+  - TRIDENT
+  - FIREWORK_ROCKET
 block-food-right-click: true
+block-block-right-click: true
+block-armor-right-click: true
+block-bucket-right-click: true

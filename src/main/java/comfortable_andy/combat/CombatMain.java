@@ -1,5 +1,6 @@
 package comfortable_andy.combat;
 
+import com.destroystokyo.paper.MaterialTags;
 import comfortable_andy.combat.actions.BashAction;
 import comfortable_andy.combat.actions.IAction;
 import comfortable_andy.combat.actions.StabAction;
@@ -17,6 +18,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
@@ -55,17 +57,24 @@ public final class CombatMain extends JavaPlugin implements Listener {
     public void onPlayerInteract(PlayerInteractEvent event) {
         if (event.getHand() != EquipmentSlot.HAND) return; // interact event fires twice
         if (event.getAction() == Action.PHYSICAL) return;
-        final String mainHand = event.getPlayer().getInventory().getItemInMainHand().getType().toString();
-        final String offHand = event.getPlayer().getInventory().getItemInOffHand().getType().toString();
+        final ItemStack itemMain = event.getPlayer().getInventory().getItemInMainHand();
+        final ItemStack itemOff = event.getPlayer().getInventory().getItemInOffHand();
+        final String mainHand = itemMain.getType().toString();
+        final String offHand = itemOff.getType().toString();
+        // TODO check if player is digging
         if (event.getAction().isLeftClick()
                 && getConfig().getStringList("left-click-blacklist").contains(mainHand)) {
             return;
         }
         if (event.getAction().isRightClick()) {
             if (getConfig().getBoolean("block-food-right-click", true)
-                    && event.getItem() != null && event.getItem().getType().isEdible()) {
-                return;
-            }
+                    && (itemMain.getType().isEdible() || itemOff.getType().isEdible())) return;
+            if (getConfig().getBoolean("block-block-right-click", true)
+                    && (itemMain.getType().isBlock() || itemOff.getType().isBlock())) return;
+            if (getConfig().getBoolean("block-armor-right-click", true)
+                    && (MaterialTags.ARMOR.isTagged(itemMain) || MaterialTags.ARMOR.isTagged(itemOff))) return;
+            if (getConfig().getBoolean("block-bucket-right-click", true)
+                    && (MaterialTags.ARMOR.isTagged(itemMain) || MaterialTags.BUCKETS.isTagged(itemOff))) return;
             if (getConfig().getStringList("right-click-blacklist").contains(mainHand)
                     || getConfig().getStringList("right-click-blacklist").contains(offHand)) {
                 return;
