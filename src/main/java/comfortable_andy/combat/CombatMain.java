@@ -1,6 +1,7 @@
 package comfortable_andy.combat;
 
 import com.destroystokyo.paper.MaterialTags;
+import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import comfortable_andy.combat.actions.BashAction;
 import comfortable_andy.combat.actions.IAction;
 import comfortable_andy.combat.actions.StabAction;
@@ -14,12 +15,15 @@ import org.bukkit.GameMode;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitRunnable;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -53,9 +57,35 @@ public final class CombatMain extends JavaPlugin implements Listener {
         return INSTANCE;
     }
 
-    @EventHandler
+    private final Set<Player> interactBlacklist = Collections.synchronizedSet(new HashSet<>());
+
+    private void blacklist(Player player) {
+        interactBlacklist.add(player);
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                interactBlacklist.remove(player);
+            }
+        }.runTaskLater(this, 1);
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onPlayerLaunchProjectile(PlayerLaunchProjectileEvent event) {
+        blacklist(event.getPlayer());
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onPlayerDropItem(PlayerDropItemEvent event) {
+        blacklist(event.getPlayer());
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlayerInteract(PlayerInteractEvent event) {
-        if (event.getHand() != EquipmentSlot.HAND) return; // interact event fires twice
+        if (event.getAction().isLeftClick() && interactBlacklist.contains(event.getPlayer())) {
+            interactBlacklist.remove(event.getPlayer());
+            return;
+        }
+        if (event.getHand() != EquipmentSlot.HAND) return; // interact event fires once for each hand
         if (event.getAction() == Action.PHYSICAL) return;
         final ItemStack itemMain = event.getPlayer().getInventory().getItemInMainHand();
         final ItemStack itemOff = event.getPlayer().getInventory().getItemInOffHand();
@@ -89,6 +119,7 @@ public final class CombatMain extends JavaPlugin implements Listener {
         final CombatPlayerData data = getData(player);
         final boolean isAttack = actionType == IAction.ActionType.ATTACK;
         if (data.inCooldown(isAttack)) return false;
+        if (!isAttack) player.swingOffHand();
         for (IAction action : actions) {
             if (action.tryActivate(player, data, actionType) == IAction.ActionResult.ACTIVATED) {
                 data.addCooldown(
