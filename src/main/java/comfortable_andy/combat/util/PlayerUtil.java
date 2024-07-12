@@ -45,6 +45,9 @@ public class PlayerUtil {
         }
         final double knockBack = getKnockBack(player, slot) + (player.isSprinting() ? 1 : 0) + item.getEnchantmentLevel(Enchantment.KNOCKBACK);
         final double finalDamage = damage * damageMod;
+        final int impalingLevel = item.getEnchantmentLevel(Enchantment.IMPALING);
+        final int arthropodLevel = item.getEnchantmentLevel(Enchantment.BANE_OF_ARTHROPODS);
+        final int smiteLevel = item.getEnchantmentLevel(Enchantment.SMITE);
         PlayerUtil.sweep(
                 player::getEyeLocation,
                 PlayerUtil.getReach(player),
@@ -62,12 +65,10 @@ public class PlayerUtil {
                     }
                     double mod = 0;
 
-                    if (Tag.ENTITY_TYPES_SENSITIVE_TO_SMITE.isTagged(damaged.getType()))
-                        mod += item.getEnchantmentLevel(Enchantment.SMITE) * 2.5;
+                    if (Tag.ENTITY_TYPES_SENSITIVE_TO_SMITE.isTagged(damaged.getType())) mod += smiteLevel * 2.5;
                     if (Tag.ENTITY_TYPES_SENSITIVE_TO_BANE_OF_ARTHROPODS.isTagged(damaged.getType()))
-                        mod += item.getEnchantmentLevel(Enchantment.BANE_OF_ARTHROPODS) * 2.5;
-                    if (Tag.ENTITY_TYPES_SENSITIVE_TO_IMPALING.isTagged(damaged.getType()))
-                        mod += item.getEnchantmentLevel(Enchantment.IMPALING) * 2.5;
+                        mod += arthropodLevel * 2.5;
+                    if (Tag.ENTITY_TYPES_SENSITIVE_TO_IMPALING.isTagged(damaged.getType())) mod += impalingLevel * 2.5;
 
                     damaged.damage(
                             finalDamage + mod / steps,
