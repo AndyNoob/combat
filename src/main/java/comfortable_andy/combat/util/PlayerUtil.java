@@ -55,7 +55,6 @@ public class PlayerUtil {
                 (damaged, mtv) -> {
                     if (damaged == player) return;
                     double knockBack = getKnockBack(player, slot) + (player.isSprinting() ? 1 : 0);
-                    player.sendMessage(knockBack + "");
                     if (knockBack > 0 && damaged instanceof LivingEntity e) {
                         if (!((CraftWorld) player.getWorld()).getHandle().paperConfig().misc.disableSprintInterruptionOnAttack)
                             player.setSprinting(false);
