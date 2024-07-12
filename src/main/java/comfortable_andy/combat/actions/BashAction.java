@@ -3,6 +3,7 @@ package comfortable_andy.combat.actions;
 import comfortable_andy.combat.CombatPlayerData;
 import comfortable_andy.combat.util.PlayerUtil;
 import lombok.ToString;
+import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.joml.Quaterniond;
 import org.joml.Vector2f;
@@ -32,6 +33,7 @@ public class BashAction extends SweepingAction {
                 speedMultiplier,
                 damageMultiplierPerStep
         );
+        player.getWorld().playSound(player.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, 1, 1);
     }
 
 }
