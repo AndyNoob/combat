@@ -43,6 +43,7 @@ public class PlayerUtil {
         if (sharpness > 0) {
             damage += 0.5 * sharpness + 0.5;
         }
+        player.damageItemStack(item, 1);
         final double knockBack = getKnockBack(player, slot) + (player.isSprinting() ? 1 : 0) + item.getEnchantmentLevel(Enchantment.KNOCKBACK);
         final double finalDamage = damage * damageMod;
         final int impalingLevel = item.getEnchantmentLevel(Enchantment.IMPALING);
