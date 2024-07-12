@@ -1,14 +1,22 @@
 package comfortable_andy.combat.util;
 
 import comfortable_andy.combat.CombatMain;
+import io.papermc.paper.configuration.WorldConfiguration;
 import net.kyori.adventure.key.Key;
+import net.minecraft.network.protocol.game.ClientboundAnimatePacket;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Item;
 import org.bukkit.Location;
+import org.bukkit.Sound;
 import org.bukkit.Tag;
+import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.craftbukkit.CraftWorld;
+import org.bukkit.craftbukkit.damage.CraftDamageSource;
+import org.bukkit.craftbukkit.entity.CraftEntity;
+import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.damage.DamageSource;
 import org.bukkit.damage.DamageType;
 import org.bukkit.enchantments.Enchantment;
@@ -17,6 +25,7 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
@@ -60,8 +69,11 @@ public class PlayerUtil {
                 (damaged, mtv) -> {
                     if (damaged == player) return;
                     if (!player.hasLineOfSight(damaged)) return;
+                    final World world = player.getWorld();
+                    final ServerLevel level = ((CraftWorld) world).getHandle();
+                    final WorldConfiguration paperConfig = level.paperConfig();
                     if (knockBack > 0 && damaged instanceof LivingEntity e) {
-                        if (!((CraftWorld) player.getWorld()).getHandle().paperConfig().misc.disableSprintInterruptionOnAttack)
+                        if (!paperConfig.misc.disableSprintInterruptionOnAttack)
                             player.setSprinting(false);
                         e.knockback(knockBack, -mtv.getX(), -mtv.getZ());
                     }
@@ -72,13 +84,24 @@ public class PlayerUtil {
                         mod += arthropodLevel * 2.5;
                     if (Tag.ENTITY_TYPES_SENSITIVE_TO_IMPALING.isTagged(damaged.getType())) mod += impalingLevel * 2.5;
 
+                    final DamageSource source = DamageSource
+                            .builder(DamageType.PLAYER_ATTACK)
+                            .withCausingEntity(player)
+                            .withDirectEntity(player)
+                            .build();
+                    @SuppressWarnings("deprecation") final boolean critical = !player.isClimbing() && player.getFallDistance() > 0 && !player.isOnGround() && !player.isInWater() && !player.isSprinting() && !player.isInsideVehicle() && !player.hasPotionEffect(PotionEffectType.BLINDNESS) && !paperConfig.entities.behavior.disablePlayerCrits;
+                    double finalFinalDamage = finalDamage + mod / steps;
+                    final Location location = player.getLocation();
+                    if (critical) {
+                        ((CraftDamageSource) source).getHandle().critical();
+                        finalFinalDamage *= 1.5;
+                        world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_CRIT, 1, 1);
+                        ((CraftPlayer) player).getHandle().crit(((CraftEntity) damaged).getHandle());
+                    }
+                    world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_STRONG, 1, 1);
                     damaged.damage(
-                            finalDamage + mod / steps,
-                            DamageSource
-                                    .builder(DamageType.PLAYER_ATTACK)
-                                    .withCausingEntity(player)
-                                    .withDirectEntity(player)
-                                    .build()
+                            finalFinalDamage,
+                            source
                     );
                 }
         );
