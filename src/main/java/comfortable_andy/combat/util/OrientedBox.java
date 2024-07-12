@@ -54,6 +54,7 @@ public class OrientedBox implements Cloneable {
         return this;
     }
 
+    @SuppressWarnings("UnusedReturnValue")
     public OrientedBox moveBy(Vector move) {
         this.center.add(move);
         for (Vector vertex : this.vertices) {

@@ -10,7 +10,6 @@ import org.joml.Vector2f;
 
 import java.util.Vector;
 
-import static comfortable_andy.combat.util.ItemUtil.getAttribute;
 import static comfortable_andy.combat.util.PlayerUtil.getItemLess;
 import static comfortable_andy.combat.util.PlayerUtil.getKnockBack;
 import static comfortable_andy.combat.util.VecUtil.FORMAT;
@@ -33,6 +32,7 @@ public class CombatPlayerData {
         this.player = player;
     }
 
+    @SuppressWarnings("deprecation")
     public void tick() {
         final Location location = this.player.getLocation();
         this.enterCamera(new Vector2f(location.getPitch(), location.getYaw()));
