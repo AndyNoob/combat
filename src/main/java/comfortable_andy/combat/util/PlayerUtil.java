@@ -8,10 +8,12 @@ import org.bukkit.Tag;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
+import org.bukkit.craftbukkit.CraftWorld;
 import org.bukkit.damage.DamageSource;
 import org.bukkit.damage.DamageType;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Damageable;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
@@ -52,7 +54,13 @@ public class PlayerUtil {
                 ceil(ticks / (steps + 0d)),
                 (damaged, mtv) -> {
                     if (damaged == player) return;
-                    damaged.setVelocity(damaged.getVelocity().add(mtv));
+                    double knockBack = getKnockBack(player, slot) + (player.isSprinting() ? 1 : 0);
+                    player.sendMessage(knockBack + "");
+                    if (knockBack > 0 && damaged instanceof LivingEntity e) {
+                        if (!((CraftWorld) player.getWorld()).getHandle().paperConfig().misc.disableSprintInterruptionOnAttack)
+                            player.setSprinting(false);
+                        e.knockback(knockBack, -mtv.getX(), -mtv.getZ());
+                    }
                     double mod = 0;
 
                     if (Tag.ENTITY_TYPES_SENSITIVE_TO_SMITE.isTagged(damaged.getType()))
@@ -169,6 +177,10 @@ public class PlayerUtil {
 
     public static double getDmg(Player player, EquipmentSlot slot) {
         return getItemLess(player, Attribute.GENERIC_ATTACK_DAMAGE, Item.BASE_ATTACK_DAMAGE_ID.toString()) + ItemUtil.getAttribute(player.getInventory().getItem(slot), EquipmentSlot.HAND, Attribute.GENERIC_ATTACK_DAMAGE);
+    }
+
+    public static double getKnockBack(Player player, EquipmentSlot slot) {
+        return getItemLess(player, Attribute.GENERIC_ATTACK_KNOCKBACK) + ItemUtil.getAttribute(player.getInventory().getItem(slot), EquipmentSlot.HAND, Attribute.GENERIC_ATTACK_KNOCKBACK);
     }
 
 }

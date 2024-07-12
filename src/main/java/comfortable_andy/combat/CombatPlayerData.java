@@ -12,6 +12,7 @@ import java.util.Vector;
 
 import static comfortable_andy.combat.util.ItemUtil.getAttribute;
 import static comfortable_andy.combat.util.PlayerUtil.getItemLess;
+import static comfortable_andy.combat.util.PlayerUtil.getKnockBack;
 import static comfortable_andy.combat.util.VecUtil.FORMAT;
 import static net.minecraft.util.Mth.degreesDifference;
 
@@ -38,9 +39,9 @@ public class CombatPlayerData {
         this.attackDelayLeft = this.attackDelayLeft.mapFirst(a -> Math.max(0, a - 1)).mapSecond(a -> Math.max(0, a - 1));
         this.player.sendActionBar("delta: " + averageCameraAngleDelta().toString(FORMAT) +
                 " cap: " + this.lastCameraAngles.capacity() +
-                " dmg: " + getItemLess(player, Attribute.GENERIC_ATTACK_DAMAGE/*, Item.BASE_ATTACK_DAMAGE_ID.toString()*/) +
-                " main dmg: " + FORMAT.format(getAttribute(player.getInventory().getItemInMainHand(), EquipmentSlot.HAND, Attribute.GENERIC_ATTACK_DAMAGE)) +
-                " off dmg: " + FORMAT.format(getAttribute(player.getInventory().getItemInOffHand(), EquipmentSlot.HAND, Attribute.GENERIC_ATTACK_DAMAGE)) +
+                " kb: " + getItemLess(player, Attribute.GENERIC_ATTACK_KNOCKBACK) +
+                " main kb: " + FORMAT.format(getKnockBack(player, EquipmentSlot.HAND)) +
+                " off kb: " + FORMAT.format(getKnockBack(player, EquipmentSlot.OFF_HAND)) +
                 " cd cd: " + attackDelayLeft.toString()
         );
     }
