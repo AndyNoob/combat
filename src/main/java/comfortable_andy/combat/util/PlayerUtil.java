@@ -3,7 +3,6 @@ package comfortable_andy.combat.util;
 import comfortable_andy.combat.CombatMain;
 import io.papermc.paper.configuration.WorldConfiguration;
 import net.kyori.adventure.key.Key;
-import net.minecraft.network.protocol.game.ClientboundAnimatePacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Item;
 import org.bukkit.Location;
@@ -99,6 +98,8 @@ public class PlayerUtil {
                         ((CraftPlayer) player).getHandle().crit(((CraftEntity) damaged).getHandle());
                     }
                     world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_STRONG, 1, 1);
+                    if (player.isSprinting())
+                        world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_KNOCKBACK, 1, 1);
                     damaged.damage(
                             finalFinalDamage,
                             source
