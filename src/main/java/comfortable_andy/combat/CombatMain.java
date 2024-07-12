@@ -71,7 +71,8 @@ public final class CombatMain extends JavaPlugin implements Listener {
                 return;
             }
         }
-        event.setCancelled(runAction(event.getPlayer(), event.getAction().isLeftClick() ? IAction.ActionType.ATTACK : IAction.ActionType.INTERACT));
+        final boolean cancel = runAction(event.getPlayer(), event.getAction().isLeftClick() ? IAction.ActionType.ATTACK : IAction.ActionType.INTERACT);
+        if (cancel) event.setCancelled(true);
     }
 
     private boolean runAction(Player player, IAction.ActionType actionType) {
