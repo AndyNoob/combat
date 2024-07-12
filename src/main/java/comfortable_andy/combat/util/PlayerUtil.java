@@ -43,6 +43,7 @@ public class PlayerUtil {
         if (sharpness > 0) {
             damage += 0.5 * sharpness + 0.5;
         }
+        final double knockBack = getKnockBack(player, slot) + (player.isSprinting() ? 1 : 0) + item.getEnchantmentLevel(Enchantment.KNOCKBACK);
         final double finalDamage = damage * damageMod;
         PlayerUtil.sweep(
                 player::getEyeLocation,
@@ -54,7 +55,6 @@ public class PlayerUtil {
                 ceil(ticks / (steps + 0d)),
                 (damaged, mtv) -> {
                     if (damaged == player) return;
-                    double knockBack = getKnockBack(player, slot) + (player.isSprinting() ? 1 : 0);
                     if (knockBack > 0 && damaged instanceof LivingEntity e) {
                         if (!((CraftWorld) player.getWorld()).getHandle().paperConfig().misc.disableSprintInterruptionOnAttack)
                             player.setSprinting(false);
