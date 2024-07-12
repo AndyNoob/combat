@@ -14,6 +14,7 @@ right-click-blacklist:
   - OMINOUS_BOTTLE
   - TRIDENT
   - FIREWORK_ROCKET
+  - SHIELD
 block-food-right-click: true
 block-block-right-click: true
 block-armor-right-click: true
