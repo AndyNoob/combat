@@ -18,6 +18,9 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockDamageAbortEvent;
+import org.bukkit.event.block.BlockDamageEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
@@ -59,7 +62,7 @@ public final class CombatMain extends JavaPlugin implements Listener {
 
     private final Set<Player> interactBlacklist = Collections.synchronizedSet(new HashSet<>());
 
-    private void blacklist(Player player) {
+    private void tempBlacklist(Player player) {
         interactBlacklist.add(player);
         new BukkitRunnable() {
             @Override
@@ -71,12 +74,28 @@ public final class CombatMain extends JavaPlugin implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onPlayerLaunchProjectile(PlayerLaunchProjectileEvent event) {
-        blacklist(event.getPlayer());
+        tempBlacklist(event.getPlayer());
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onPlayerDropItem(PlayerDropItemEvent event) {
-        blacklist(event.getPlayer());
+        tempBlacklist(event.getPlayer());
+    }
+
+    @EventHandler
+    public void onBlockDamage(BlockDamageEvent event) {
+        if (!event.getInstaBreak())
+            interactBlacklist.add(event.getPlayer());
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onBlockBreak(BlockBreakEvent event) {
+        interactBlacklist.remove(event.getPlayer());
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onStopBreaking(BlockDamageAbortEvent event) {
+        interactBlacklist.remove(event.getPlayer());
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
@@ -91,7 +110,6 @@ public final class CombatMain extends JavaPlugin implements Listener {
         final ItemStack itemOff = event.getPlayer().getInventory().getItemInOffHand();
         final String mainHand = itemMain.getType().toString();
         final String offHand = itemOff.getType().toString();
-        // TODO check if player is digging
         if (event.getAction().isLeftClick()
                 && getConfig().getStringList("left-click-blacklist").contains(mainHand)) {
             return;
@@ -111,7 +129,7 @@ public final class CombatMain extends JavaPlugin implements Listener {
             }
         }
         final boolean cancel = runAction(event.getPlayer(), event.getAction().isLeftClick() ? IAction.ActionType.ATTACK : IAction.ActionType.INTERACT);
-        if (cancel) event.setCancelled(true);
+        if (cancel && event.getAction() != Action.LEFT_CLICK_BLOCK) event.setCancelled(true);
     }
 
     private boolean runAction(Player player, IAction.ActionType actionType) {
