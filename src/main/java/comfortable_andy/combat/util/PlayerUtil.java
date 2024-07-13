@@ -33,6 +33,7 @@ import org.joml.Quaterniond;
 import org.joml.Vector3d;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
@@ -51,7 +52,7 @@ public class PlayerUtil {
         if (sharpness > 0) {
             damage += 0.5 * sharpness + 0.5;
         }
-        player.damageItemStack(item, 1);
+        final AtomicBoolean damagedItem = new AtomicBoolean();
         final double knockBack = getKnockBack(player, slot) + (player.isSprinting() ? 1 : 0) + item.getEnchantmentLevel(Enchantment.KNOCKBACK);
         final double finalDamage = damage * damageMod;
         final int impalingLevel = item.getEnchantmentLevel(Enchantment.IMPALING);
@@ -104,6 +105,10 @@ public class PlayerUtil {
                             finalFinalDamage,
                             source
                     );
+                    if (!damagedItem.get() && !player.getGameMode().isInvulnerable()) {
+                        player.damageItemStack(item, 1);
+                        damagedItem.set(false);
+                    }
                 }
         );
     }
