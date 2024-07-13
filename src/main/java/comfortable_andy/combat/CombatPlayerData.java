@@ -60,6 +60,7 @@ public class CombatPlayerData {
     public Vector2f averageCameraAngleDelta() {
         final Vector2f accumulator = new Vector2f();
         for (int i = 1; i < CACHE_COUNT; i++) {
+            if (i >= this.lastCameraAngles.size()) break;
             final Vector2f cur = this.lastCameraAngles.get(i);
             if (cur == null) break;
             final Vector2f last = this.lastCameraAngles.get(i - 1);
