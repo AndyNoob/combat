@@ -13,9 +13,9 @@ import java.util.List;
 
 @ToString
 public abstract class SweepingAction implements IAction {
-    float triggerAmount = 8;
-    protected float speedMultiplier = 0.25f;
-    protected float damageMultiplierPerStep = 1.2f;
+    double triggerAmount = 8;
+    protected double speedMultiplier = 0.25f;
+    protected double damageMultiplierPerStep = 1.2f;
     protected int steps = 5;
     protected List<Material> blacklist = List.of(Material.BOW, Material.CROSSBOW);
 

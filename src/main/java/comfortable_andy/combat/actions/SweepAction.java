@@ -16,8 +16,8 @@ import static comfortable_andy.combat.util.VecUtil.fromDir;
 @ToString(callSuper = true)
 public class SweepAction extends SweepingAction {
 
-    private float windBackRotY = 15;
-    private float attackRotY = 30;
+    private double windBackRotY = 15;
+    private double attackRotY = 30;
 
     boolean triggered(Vector2f delta) {
         return Math.abs(delta.y) > triggerAmount;

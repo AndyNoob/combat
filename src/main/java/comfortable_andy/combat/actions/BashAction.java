@@ -15,8 +15,8 @@ import static comfortable_andy.combat.util.VecUtil.fromDir;
 @ToString(callSuper = true)
 public class BashAction extends SweepingAction {
 
-    private float windBackRotX = 15;
-    private float attackRotX = 30;
+    private double windBackRotX = 15;
+    private double attackRotX = 30;
 
     boolean triggered(Vector2f delta) {
         return (delta.x > triggerAmount);

@@ -42,7 +42,7 @@ import static org.bukkit.util.NumberConversions.ceil;
 public class PlayerUtil {
 
     @SuppressWarnings("UnstableApiUsage")
-    public static void doSweep(Player player, Quaterniond start, Vector3d attack, int steps, boolean isAttack, float speedMod, float damageMod) {
+    public static void doSweep(Player player, Quaterniond start, Vector3d attack, int steps, boolean isAttack, double speedMod, double damageMod) {
         final EquipmentSlot slot = isAttack ? EquipmentSlot.HAND : EquipmentSlot.OFF_HAND;
         final int ticks = ceil(getCd(player, slot) * speedMod);
         final ItemStack item = player.getInventory().getItem(slot);
