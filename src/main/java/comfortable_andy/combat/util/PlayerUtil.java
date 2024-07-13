@@ -2,8 +2,10 @@ package comfortable_andy.combat.util;
 
 import comfortable_andy.combat.CombatMain;
 import io.papermc.paper.configuration.WorldConfiguration;
+import io.papermc.paper.event.entity.EntityKnockbackEvent;
 import net.kyori.adventure.key.Key;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Item;
 import org.bukkit.Location;
 import org.bukkit.Sound;
@@ -15,6 +17,7 @@ import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.craftbukkit.CraftWorld;
 import org.bukkit.craftbukkit.damage.CraftDamageSource;
 import org.bukkit.craftbukkit.entity.CraftEntity;
+import org.bukkit.craftbukkit.entity.CraftLivingEntity;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.damage.DamageSource;
 import org.bukkit.damage.DamageType;
@@ -72,10 +75,17 @@ public class PlayerUtil {
                     final World world = player.getWorld();
                     final ServerLevel level = ((CraftWorld) world).getHandle();
                     final WorldConfiguration paperConfig = level.paperConfig();
+                    final ServerPlayer playerHandle = ((CraftPlayer) player).getHandle();
                     if (knockBack > 0 && damaged instanceof LivingEntity e) {
                         if (!paperConfig.misc.disableSprintInterruptionOnAttack)
                             player.setSprinting(false);
-                        e.knockback(knockBack, -mtv.getX(), -mtv.getZ());
+                        ((CraftLivingEntity) e).getHandle().knockback(
+                                knockBack,
+                                -mtv.getX(),
+                                -mtv.getZ(),
+                                playerHandle,
+                                EntityKnockbackEvent.Cause.ENTITY_ATTACK
+                        );
                     }
                     double mod = 0;
 
@@ -96,7 +106,7 @@ public class PlayerUtil {
                         ((CraftDamageSource) source).getHandle().critical();
                         finalFinalDamage *= 1.5;
                         world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_CRIT, 1, 1);
-                        ((CraftPlayer) player).getHandle().crit(((CraftEntity) damaged).getHandle());
+                        playerHandle.crit(((CraftEntity) damaged).getHandle());
                     }
                     world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_STRONG, 1, 1);
                     if (player.isSprinting())
@@ -168,7 +178,7 @@ public class PlayerUtil {
                     CombatMain.getInstance().debug(entity.getName());
                     CombatMain.getInstance().debug(entityBox);
                     final Vector mtv = attackBox.collides(entityBox, Comparator.comparingDouble(direction::dot).reversed())
-                            .stream().filter(v -> direction.dot(v) > 0).findFirst().orElse(null);
+                            .stream().max(Comparator.comparingDouble(direction::dot)).filter(v -> direction.dot(v) > 0).orElse(null);
                     if (mtv != null) {
                         callback.accept(entity, mtv.normalize());
                         return true;
