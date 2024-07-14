@@ -136,7 +136,10 @@ public final class CombatMain extends JavaPlugin implements Listener {
         if (player.getGameMode() == GameMode.SPECTATOR) return false;
         final CombatPlayerData data = getData(player);
         final boolean isAttack = actionType == IAction.ActionType.ATTACK;
-        if (!isAttack) player.swingOffHand();
+        if (!isAttack) {
+            player.swingOffHand();
+            tempBlacklist(player);
+        }
         for (IAction action : actions) {
             if (action.tryActivate(player, data, actionType) == IAction.ActionResult.ACTIVATED) {
                 final EquipmentSlot slot = isAttack ? EquipmentSlot.HAND : EquipmentSlot.OFF_HAND;
