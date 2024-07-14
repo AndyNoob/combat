@@ -70,11 +70,11 @@ public class CombatPlayerData {
         return accumulator.div(CACHE_COUNT);
     }
 
-    public boolean inCooldown(boolean main) {
-        return (main ? this.attackDelayLeft.getFirst() : this.attackDelayLeft.getSecond()) > 0;
+    public long getCooldown(boolean main) {
+        return (main ? this.attackDelayLeft.getFirst() : this.attackDelayLeft.getSecond());
     }
 
-    public void addCooldown(boolean main, long amt) {
+    public void setCooldown(boolean main, long amt) {
         this.attackDelayLeft = main ? this.attackDelayLeft.mapFirst(a -> amt) : this.attackDelayLeft.mapSecond(a -> amt);
     }
 

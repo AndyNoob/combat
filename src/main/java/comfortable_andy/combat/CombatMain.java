@@ -136,17 +136,12 @@ public final class CombatMain extends JavaPlugin implements Listener {
         if (player.getGameMode() == GameMode.SPECTATOR) return false;
         final CombatPlayerData data = getData(player);
         final boolean isAttack = actionType == IAction.ActionType.ATTACK;
-        if (data.inCooldown(isAttack)) return false;
         if (!isAttack) player.swingOffHand();
         for (IAction action : actions) {
             if (action.tryActivate(player, data, actionType) == IAction.ActionResult.ACTIVATED) {
                 final EquipmentSlot slot = isAttack ? EquipmentSlot.HAND : EquipmentSlot.OFF_HAND;
                 final int cd = ceil(getCd(player, slot));
-                data.addCooldown(
-                        isAttack,
-                        cd
-                );
-                player.setCooldown(player.getInventory().getItem(slot).getType(), cd);
+                data.setCooldown(isAttack, cd);
                 return true;
             }
         }

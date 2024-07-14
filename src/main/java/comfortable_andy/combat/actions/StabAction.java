@@ -14,14 +14,16 @@ public class StabAction implements IAction {
 
     @Override
     public @NotNull ActionResult tryActivate(Player player, CombatPlayerData data, ActionType type) {
+        boolean isAttack = type == ActionType.ATTACK;
         PlayerUtil.doSweep(
                 player,
                 fromDir(player.getLocation()),
                 new Vector3d(),
                 1,
-                type == ActionType.ATTACK,
+                isAttack,
                 1,
-                1
+                1,
+                data.getCooldown(isAttack)
         );
         return ActionResult.ACTIVATED;
     }

@@ -42,7 +42,8 @@ public class SweepAction extends SweepingAction {
                 steps,
                 isAttack,
                 speedMultiplier,
-                damageMultiplierPerStep
+                damageMultiplierPerStep,
+                data.getCooldown(isAttack)
         );
         player.getWorld().playSound(player.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, 1, 1);
         ((CraftPlayer) player).getHandle().sweepAttack();
