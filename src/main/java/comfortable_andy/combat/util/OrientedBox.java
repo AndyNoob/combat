@@ -132,7 +132,7 @@ public class OrientedBox implements Cloneable {
 
     public void display(World world) {
         new BukkitRunnable() {
-            int count = 2;
+            int count = 0;
 
             @Override
             public void run() {
