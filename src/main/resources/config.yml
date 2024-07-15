@@ -20,3 +20,5 @@ block-food-right-click: true
 block-block-right-click: true
 block-armor-right-click: true
 block-bucket-right-click: true
+
+box-display-particle: false

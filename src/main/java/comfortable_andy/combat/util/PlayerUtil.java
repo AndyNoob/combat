@@ -1,6 +1,7 @@
 package comfortable_andy.combat.util;
 
 import comfortable_andy.combat.CombatMain;
+import comfortable_andy.combat.handler.OrientedBoxHandler;
 import io.papermc.paper.configuration.WorldConfiguration;
 import io.papermc.paper.event.entity.EntityKnockbackEvent;
 import net.kyori.adventure.key.Key;
@@ -30,11 +31,13 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import org.intellij.lang.annotations.Subst;
+import org.jetbrains.annotations.NotNull;
 import org.joml.Quaterniond;
 import org.joml.Vector3d;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
@@ -172,46 +175,55 @@ public class PlayerUtil {
         final Quaterniond step = rotateLocal(new Quaterniond(), rawStep, attackBox.getAxis());
 
         if (steps <= 1) attackBox.rotateBy(step);
-        final Map<Damageable, OrientedBox> possible = new HashMap<>();
+        final Map<Damageable, OrientedBox> possible = collectNearby(reach, loc, Collections.emptyList());
+        final AtomicReference<Vector> direction = new AtomicReference<>(loc.getDirection());
 
-        new BukkitRunnable() {
-            int stepsLeft = steps;
+        CombatMain.getInstance().boxHandler.addBox(
+                attackBox,
+                OrientedBoxHandler.BoxInfo.<Damageable>builder()
+                        .boxSupplier(() -> {
+                            possible.forEach((e, box) ->
+                                    box.moveBy(
+                                            e.getBoundingBox()
+                                                    .getCenter()
+                                                    .subtract(box.getCenter())
+                                    )
+                            );
+                            return possible;
+                        })
+                        .collideCallback(((damageable, vector) -> {
+                            if (direction.get().dot(vector) <= 0) return;
+                            callback.accept(damageable, vector);
+                        }))
+                        .mtvComparator(((Comparator<Vector>) (a, b) -> {
+                            final Vector dir = direction.get();
+                            return Double.compare(dir.dot(a), dir.dot(b));
+                        }).reversed())
+                        .tickCallback(() -> {
+                            final Location curLoc = supplier.get();
+                            possible.putAll(collectNearby(reach, curLoc, possible.keySet()));
+                            if (CombatMain.getInstance()
+                                    .getConfig().getBoolean("box-display-particle", false))
+                                attackBox.clone().display(curLoc.getWorld());
+                            attackBox.rotateBy(step);
+                            direction.set(curLoc.getDirection());
+                        })
+                        .ticks(Math.max(1, steps))
+                        .build()
+        );
+    }
 
-            public void run() {
-                if (stepsLeft-- <= 0) {
-                    cancel();
-                    return;
-                }
-                Location loc = supplier.get();
-                Vector direction = loc.getDirection();
-                possible.putAll(loc
-                        .getNearbyEntitiesByType(Damageable.class, reach)
-                        .stream()
-                        .filter(e -> !possible.containsKey(e))
-                        .collect(HashMap::new, (m, d) -> m.put(d, new OrientedBox(d.getBoundingBox())), HashMap::putAll)
-                );
-
-                if (possible.isEmpty()) return;
-
-                attackBox.clone().display(loc.getWorld());
-
-                // TODO efficient expansion of collider?
-                possible.entrySet().removeIf(e -> {
-                    final Damageable entity = e.getKey();
-                    final OrientedBox entityBox = e.getValue();
-                    entityBox.moveBy(entity.getBoundingBox().getCenter().subtract(entityBox.getCenter()));
-                    CombatMain.getInstance().debug(entity.getName());
-                    CombatMain.getInstance().debug(entityBox);
-                    final Vector mtv = attackBox.collides(entityBox, Comparator.comparingDouble(direction::dot).reversed())
-                            .stream().max(Comparator.comparingDouble(direction::dot)).filter(v -> direction.dot(v) > 0).orElse(null);
-                    if (mtv != null) {
-                        callback.accept(entity, mtv.normalize());
-                        return true;
-                    } else return false;
-                });
-                attackBox.rotateBy(step);
-            }
-        }.runTaskTimer(CombatMain.getInstance(), 0, ticksPerStep);
+    @NotNull
+    private static Map<Damageable, OrientedBox> collectNearby(
+            float reach,
+            Location curLoc,
+            Collection<Damageable> excluding
+    ) {
+        return curLoc
+                .getNearbyEntitiesByType(Damageable.class, reach)
+                .stream()
+                .filter(e -> !excluding.contains(e))
+                .collect(HashMap::new, (m, d) -> m.put(d, new OrientedBox(d.getBoundingBox())), HashMap::putAll);
     }
 
     public static float getReach(Player player) {
