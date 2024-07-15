@@ -100,6 +100,7 @@ public final class CombatMain extends JavaPlugin implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlayerInteract(PlayerInteractEvent event) {
+        if (!getConfig().getBoolean("enabled", true)) return;
         if (event.getAction().isLeftClick() && interactBlacklist.contains(event.getPlayer())) {
             interactBlacklist.remove(event.getPlayer());
             return;
@@ -153,6 +154,7 @@ public final class CombatMain extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onPlayerAttack(PrePlayerAttackEntityEvent e) {
+        if (!getConfig().getBoolean("enabled", true)) return;
         e.setCancelled(true);
         runAction(e.getPlayer(), IAction.ActionType.ATTACK);
     }
