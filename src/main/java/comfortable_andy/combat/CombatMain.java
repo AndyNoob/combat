@@ -3,10 +3,14 @@ package comfortable_andy.combat;
 import com.destroystokyo.paper.MaterialTags;
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import com.mojang.brigadier.Command;
+import com.mojang.brigadier.arguments.BoolArgumentType;
+import com.mojang.brigadier.builder.ArgumentBuilder;
+import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import comfortable_andy.combat.actions.BashAction;
 import comfortable_andy.combat.actions.IAction;
 import comfortable_andy.combat.actions.StabAction;
 import comfortable_andy.combat.actions.SweepAction;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import io.papermc.paper.event.player.PrePlayerAttackEntityEvent;
 import io.papermc.paper.plugin.lifecycle.event.LifecycleEventManager;
@@ -51,16 +55,18 @@ public final class CombatMain extends JavaPlugin implements Listener {
     private boolean debugLog = false;
     private final List<IAction> actions = new ArrayList<>();
     private final Mapable mapable = new MapableBuilder().createMapable();
+    private boolean enabled;
 
     @SuppressWarnings("UnstableApiUsage")
     @Override
     public void onEnable() {
         INSTANCE = this;
-        saveDefaultConfig();
+        reload();
         loadActions();
         new CombatRunnable().runTaskTimer(this, 0, 1);
         getServer().getPluginManager().registerEvents(this, this);
-        LifecycleEventManager<Plugin> manager = this.getLifecycleManager();
+
+        final LifecycleEventManager<Plugin> manager = this.getLifecycleManager();
         manager.registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             final Commands commands = event.registrar();
             final var reload = Commands
@@ -68,20 +74,46 @@ public final class CombatMain extends JavaPlugin implements Listener {
                     .requires(s -> s.getSender()
                             .hasPermission("combat.command.reload"))
                     .executes(s -> {
-                        reloadConfig();
+                        reload();
                         s.getSource().getSender().sendMessage("Done!");
                         return Command.SINGLE_SUCCESS;
                     });
+            final Command<CommandSourceStack> enableExecutor = s -> {
+                Boolean enable;
+                try {
+                    enable = s.getArgument("enable", Boolean.class);
+                } catch (Exception e) {
+                    enable = !enabled;
+                }
+                enabled = enable;
+                s.getSource().getSender().sendMessage("Enabled: " + enabled);
+                return Command.SINGLE_SUCCESS;
+            };
+            final var enableArg = Commands.argument("enable", BoolArgumentType.bool())
+                    .executes(enableExecutor);
+            final var enable = Commands
+                    .literal("enable")
+                    .requires(s -> s.getSender()
+                            .hasPermission("combat.command.enable"))
+                    .then(enableArg)
+                    .executes(enableExecutor);
             commands.register(
                     Commands.literal("combat")
                             .requires(s -> s.getSender()
                                     .hasPermission("combat.command.use"))
                             .then(reload)
+                            .then(enable)
                             .build(),
                     "Combat plugin command.",
                     List.of("cb")
             );
         });
+    }
+
+    private void reload() {
+        saveDefaultConfig();
+        reloadConfig();
+        enabled = getConfig().getBoolean("enabled");
     }
 
     public static CombatMain getInstance() {
@@ -128,7 +160,7 @@ public final class CombatMain extends JavaPlugin implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlayerInteract(PlayerInteractEvent event) {
-        if (!getConfig().getBoolean("enabled", true)) return;
+        if (!enabled) return;
         if (event.getAction().isLeftClick() && interactBlacklist.contains(event.getPlayer())) {
             interactBlacklist.remove(event.getPlayer());
             return;
@@ -182,7 +214,7 @@ public final class CombatMain extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onPlayerAttack(PrePlayerAttackEntityEvent e) {
-        if (!getConfig().getBoolean("enabled", true)) return;
+        if (!enabled) return;
         e.setCancelled(true);
         runAction(e.getPlayer(), IAction.ActionType.ATTACK);
     }

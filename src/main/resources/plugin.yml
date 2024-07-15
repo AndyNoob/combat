@@ -7,3 +7,5 @@ permissions:
     default: op
   combat.command.reload:
     default: op
+  combat.command.enable:
+    default: op
