@@ -115,11 +115,12 @@ public class PlayerUtil {
                         world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_KNOCKBACK, 1, 1);
                         sentStrongKnockBack.set(true);
                     }
+                    final double hpBefore = damaged.getHealth();
                     damaged.damage(
                             finalFinalDamage,
                             source
                     );
-                    final double actualDamage = damaged.getLastDamageCause().isCancelled() ? 0 : damaged.getLastDamageCause().getFinalDamage();
+                    final double actualDamage = hpBefore - damaged.getHealth();
                     if (!critical) {
                         if (actualDamage > 0 && strengthScale > 0.9)
                             world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_STRONG, 1, 1);
