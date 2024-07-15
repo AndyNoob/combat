@@ -139,7 +139,7 @@ public final class CombatMain extends JavaPlugin implements Listener {
         final boolean isAttack = actionType == IAction.ActionType.ATTACK;
         if (!isAttack) {
             player.swingOffHand();
-            tempBlacklist(player);
+            interactBlacklist.add(player);
         }
         for (IAction action : actions) {
             if (action.tryActivate(player, data, actionType) == IAction.ActionResult.ACTIVATED) {
