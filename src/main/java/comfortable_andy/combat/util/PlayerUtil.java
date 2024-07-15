@@ -8,10 +8,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.Item;
-import org.bukkit.Location;
-import org.bukkit.Sound;
-import org.bukkit.Tag;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
@@ -59,6 +56,7 @@ public class PlayerUtil {
             damage += (0.5 * sharpness + 0.5) * strengthScale;
         }
         final AtomicBoolean damagedItem = new AtomicBoolean();
+        final AtomicBoolean sentStrongKnockBack = new AtomicBoolean();
         final double knockBack = getKnockBack(player, slot) + (strengthScale > 0.9 && player.isSprinting() ? 1 : 0) + item.getEnchantmentLevel(Enchantment.KNOCKBACK);
         final double finalDamage = damage * damageMod;
         final int impalingLevel = item.getEnchantmentLevel(Enchantment.IMPALING);
@@ -113,9 +111,10 @@ public class PlayerUtil {
                         world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_CRIT, 1, 1);
                         playerHandle.crit(((CraftEntity) damaged).getHandle());
                     }
-                    world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_STRONG, 1, 1);
-                    if (player.isSprinting())
+                    if (player.isSprinting() && !sentStrongKnockBack.get()) {
                         world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_KNOCKBACK, 1, 1);
+                        sentStrongKnockBack.set(true);
+                    }
                     damaged.damage(
                             finalFinalDamage,
                             source
