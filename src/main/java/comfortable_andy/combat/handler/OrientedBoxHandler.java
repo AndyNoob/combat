@@ -9,6 +9,7 @@ import org.bukkit.util.Vector;
 
 import java.util.*;
 import java.util.function.BiConsumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 public class OrientedBoxHandler extends BukkitRunnable {
@@ -22,6 +23,7 @@ public class OrientedBoxHandler extends BukkitRunnable {
         while (iterator.hasNext()) {
             final Map.Entry<OrientedBox, BoxInfo<?>> entry = iterator.next();
             BoxInfo<?> info = entry.getValue();
+            if (!info.tickCheck.apply(info.ticks)) continue;
             if (info.ticks-- <= 0) {
                 iterator.remove();
                 continue;
@@ -33,7 +35,7 @@ public class OrientedBoxHandler extends BukkitRunnable {
                 ((BiConsumer<Object, Vector>) info.collideCallback)
                         .accept(checkEntry.getKey(), mtvs.get(0));
             }
-            info.tickCallback.run();
+            info.postTickCallback.run();
         }
     }
 
@@ -48,7 +50,8 @@ public class OrientedBoxHandler extends BukkitRunnable {
 
         private final Supplier<Map<E, OrientedBox>> boxSupplier;
         private final BiConsumer<E, Vector> collideCallback;
-        private final Runnable tickCallback;
+        private final Function<Integer, Boolean> tickCheck;
+        private final Runnable postTickCallback;
         private final Comparator<Vector> mtvComparator;
         private int ticks;
 

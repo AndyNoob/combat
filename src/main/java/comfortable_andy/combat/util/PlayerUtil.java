@@ -35,7 +35,9 @@ import org.joml.Quaterniond;
 import org.joml.Vector3d;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
@@ -174,8 +176,10 @@ public class PlayerUtil {
         final Quaterniond step = rotateLocal(new Quaterniond(), rawStep, attackBox.getAxis());
 
         if (steps <= 1) attackBox.rotateBy(step);
-        final Map<Damageable, OrientedBox> possible = collectNearby(reach, loc, Collections.emptyList());
-        final AtomicReference<Vector> direction = new AtomicReference<>(loc.getDirection());
+        final Map<Damageable, OrientedBox> possible = new ConcurrentHashMap<>();
+        final World world = loc.getWorld();
+        final AtomicReference<Vector> direction = new AtomicReference<>();
+        final AtomicInteger ticker = new AtomicInteger(0);
 
         CombatMain.getInstance().boxHandler.addBox(
                 attackBox,
@@ -198,14 +202,18 @@ public class PlayerUtil {
                             final Vector dir = direction.get();
                             return Double.compare(dir.dot(a), dir.dot(b));
                         }).reversed())
-                        .tickCallback(() -> {
+                        .tickCheck(left -> {
+                            if (ticker.getAndIncrement() % ticksPerStep != 0) return false;
                             final Location curLoc = supplier.get();
                             possible.putAll(collectNearby(reach, curLoc, possible.keySet()));
+                            direction.set(curLoc.getDirection());
+                            return true;
+                        })
+                        .postTickCallback(() -> {
                             if (CombatMain.getInstance()
                                     .getConfig().getBoolean("box-display-particle", false))
-                                attackBox.clone().display(curLoc.getWorld());
+                                attackBox.clone().display(world);
                             attackBox.rotateBy(step);
-                            direction.set(curLoc.getDirection());
                         })
                         .ticks(Math.max(1, steps))
                         .build()
