@@ -2,3 +2,8 @@ name: combat
 version: '${version}'
 main: comfortable_andy.combat.CombatMain
 api-version: '1.20'
+permissions:
+  combat.command.use:
+    default: op
+  combat.command.reload:
+    default: op

@@ -2,11 +2,15 @@ package comfortable_andy.combat;
 
 import com.destroystokyo.paper.MaterialTags;
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
+import com.mojang.brigadier.Command;
 import comfortable_andy.combat.actions.BashAction;
 import comfortable_andy.combat.actions.IAction;
 import comfortable_andy.combat.actions.StabAction;
 import comfortable_andy.combat.actions.SweepAction;
+import io.papermc.paper.command.brigadier.Commands;
 import io.papermc.paper.event.player.PrePlayerAttackEntityEvent;
+import io.papermc.paper.plugin.lifecycle.event.LifecycleEventManager;
+import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import lombok.Getter;
 import lombok.Setter;
 import me.comfortable_andy.mapable.Mapable;
@@ -25,6 +29,7 @@ import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -47,6 +52,7 @@ public final class CombatMain extends JavaPlugin implements Listener {
     private final List<IAction> actions = new ArrayList<>();
     private final Mapable mapable = new MapableBuilder().createMapable();
 
+    @SuppressWarnings("UnstableApiUsage")
     @Override
     public void onEnable() {
         INSTANCE = this;
@@ -54,6 +60,28 @@ public final class CombatMain extends JavaPlugin implements Listener {
         loadActions();
         new CombatRunnable().runTaskTimer(this, 0, 1);
         getServer().getPluginManager().registerEvents(this, this);
+        LifecycleEventManager<Plugin> manager = this.getLifecycleManager();
+        manager.registerEventHandler(LifecycleEvents.COMMANDS, event -> {
+            final Commands commands = event.registrar();
+            final var reload = Commands
+                    .literal("reload")
+                    .requires(s -> s.getSender()
+                            .hasPermission("combat.command.reload"))
+                    .executes(s -> {
+                        reloadConfig();
+                        s.getSource().getSender().sendMessage("Done!");
+                        return Command.SINGLE_SUCCESS;
+                    });
+            commands.register(
+                    Commands.literal("combat")
+                            .requires(s -> s.getSender()
+                                    .hasPermission("combat.command.use"))
+                            .then(reload)
+                            .build(),
+                    "Combat plugin command.",
+                    List.of("cb")
+            );
+        });
     }
 
     public static CombatMain getInstance() {
