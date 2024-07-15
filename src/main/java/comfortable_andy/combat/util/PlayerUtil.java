@@ -119,6 +119,24 @@ public class PlayerUtil {
                             finalFinalDamage,
                             source
                     );
+                    final double actualDamage = damaged.getLastDamageCause().isCancelled() ? 0 : damaged.getLastDamageCause().getFinalDamage();
+                    if (!critical) {
+                        if (actualDamage > 0 && strengthScale > 0.9)
+                            world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_STRONG, 1, 1);
+                        else world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_WEAK, 1, 1);
+                    }
+                    player.incrementStatistic(Statistic.DAMAGE_DEALT, (int) Math.round(actualDamage * 10));
+                    final int hearts = (int) (actualDamage / 2);
+                    world.spawnParticle(
+                            Particle.DAMAGE_INDICATOR,
+                            damaged.getLocation().add(0, damaged.getBoundingBox().getHeight() / 2, 0),
+                            hearts,
+                            0.1,
+                            0.0,
+                            0.1,
+                            0.2
+                    );
+
                     if (!damagedItem.get() && !player.getGameMode().isInvulnerable()) {
                         player.damageItemStack(item, 1);
                         damagedItem.set(false);
