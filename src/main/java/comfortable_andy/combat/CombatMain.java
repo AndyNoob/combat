@@ -10,6 +10,7 @@ import comfortable_andy.combat.actions.BashAction;
 import comfortable_andy.combat.actions.IAction;
 import comfortable_andy.combat.actions.StabAction;
 import comfortable_andy.combat.actions.SweepAction;
+import comfortable_andy.combat.handler.OrientedBoxHandler;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import io.papermc.paper.event.player.PrePlayerAttackEntityEvent;
@@ -50,6 +51,7 @@ public final class CombatMain extends JavaPlugin implements Listener {
     private static CombatMain INSTANCE;
 
     public final Map<Player, CombatPlayerData> playerData = new ConcurrentHashMap<>();
+    public final OrientedBoxHandler boxHandler = new OrientedBoxHandler();
     @Setter
     @Getter
     private boolean debugLog = false;
@@ -64,6 +66,7 @@ public final class CombatMain extends JavaPlugin implements Listener {
         reload();
         loadActions();
         new CombatRunnable().runTaskTimer(this, 0, 1);
+        boxHandler.runTaskTimer(this, 0, 1);
         getServer().getPluginManager().registerEvents(this, this);
 
         final LifecycleEventManager<Plugin> manager = this.getLifecycleManager();
