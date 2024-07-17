@@ -68,6 +68,10 @@ public class PlayerUtil {
         final AtomicBoolean updatedExhaust = new AtomicBoolean();
         final double knockBack = getKnockBack(player, slot) + (strengthScale > 0.9 && player.isSprinting() ? 1 : 0) + item.getEnchantmentLevel(Enchantment.KNOCKBACK);
         final double finalDamage = damage * damageMod;
+        final World world = player.getWorld();
+        final ServerLevel level = ((CraftWorld) world).getHandle();
+        final WorldConfiguration paperConfig = level.paperConfig();
+        final ServerPlayer playerHandle = ((CraftPlayer) player).getHandle();
         PlayerUtil.sweep(
                 player::getEyeLocation,
                 PlayerUtil.getReach(player),
@@ -79,10 +83,6 @@ public class PlayerUtil {
                 (damaged, mtv) -> {
                     if (damaged == player) return;
                     if (!player.hasLineOfSight(damaged)) return;
-                    final World world = player.getWorld();
-                    final ServerLevel level = ((CraftWorld) world).getHandle();
-                    final WorldConfiguration paperConfig = level.paperConfig();
-                    final ServerPlayer playerHandle = ((CraftPlayer) player).getHandle();
                     if (knockBack > 0 && damaged instanceof LivingEntity e) {
                         playerHandle.setDeltaMovement(playerHandle.getDeltaMovement().multiply(0.6, 1, 0.6));
                         if (!paperConfig.misc.disableSprintInterruptionOnAttack) {
