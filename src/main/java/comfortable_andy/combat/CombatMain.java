@@ -56,6 +56,8 @@ public final class CombatMain extends JavaPlugin implements Listener {
     private final List<IAction> actions = new ArrayList<>();
     private final Mapable mapable = new MapableBuilder().createMapable();
     private boolean enabled;
+    @Getter
+    private boolean showActionBarDebug = false;
 
     @SuppressWarnings("UnstableApiUsage")
     @Override
@@ -104,6 +106,11 @@ public final class CombatMain extends JavaPlugin implements Listener {
                                     .hasPermission("combat.command.use"))
                             .then(reload)
                             .then(enable)
+                            .then(Commands.literal("debug_msg").executes(s -> {
+                                showActionBarDebug = !showActionBarDebug;
+                                s.getSource().getSender().sendMessage("Debug Msg: " + showActionBarDebug);
+                                return Command.SINGLE_SUCCESS;
+                            }))
                             .build(),
                     "Combat plugin command.",
                     List.of("cb")

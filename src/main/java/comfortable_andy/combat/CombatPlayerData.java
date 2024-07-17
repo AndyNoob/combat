@@ -37,13 +37,15 @@ public class CombatPlayerData {
         final Location location = this.player.getLocation();
         this.enterCamera(new Vector2f(location.getPitch(), location.getYaw()));
         this.attackDelayLeft = this.attackDelayLeft.mapFirst(a -> Math.max(0, a - 1)).mapSecond(a -> Math.max(0, a - 1));
-        /*this.player.sendActionBar("delta: " + averageCameraAngleDelta().toString(FORMAT) +
-                " cap: " + this.lastCameraAngles.capacity() +
-                " kb: " + getItemLess(player, Attribute.GENERIC_ATTACK_KNOCKBACK) +
-                " main kb: " + FORMAT.format(getKnockBack(player, EquipmentSlot.HAND)) +
-                " off kb: " + FORMAT.format(getKnockBack(player, EquipmentSlot.OFF_HAND)) +
-                " cd cd: " + attackDelayLeft.toString()
-        );*/
+        if (CombatMain.getInstance().isShowActionBarDebug()) {
+            this.player.sendActionBar("delta: " + averageCameraAngleDelta().toString(FORMAT) +
+                    " cap: " + this.lastCameraAngles.capacity() +
+                    " kb: " + getItemLess(player, Attribute.GENERIC_ATTACK_KNOCKBACK) +
+                    " main kb: " + FORMAT.format(getKnockBack(player, EquipmentSlot.HAND)) +
+                    " off kb: " + FORMAT.format(getKnockBack(player, EquipmentSlot.OFF_HAND)) +
+                    " cd cd: " + attackDelayLeft.toString()
+            );
+        }
     }
 
     /**
