@@ -5,7 +5,9 @@ import comfortable_andy.combat.util.PlayerUtil;
 import lombok.ToString;
 import org.bukkit.Sound;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.EquipmentSlot;
 import org.joml.Quaterniond;
 import org.joml.Vector2f;
 import org.joml.Vector3d;
@@ -25,8 +27,10 @@ public class SweepAction extends SweepingAction {
 
     @Override
     protected void run(Player player, CombatPlayerData data, Vector2f delta, boolean isAttack) {
-        final Vector3d windBack = new Vector3d(0, -windBackRotY, 0);
-        final Vector3d attack = new Vector3d(0, attackRotY, 0);
+        final int offset = player.getInventory().getItem(isAttack ? EquipmentSlot.HAND : EquipmentSlot.OFF_HAND).getEnchantmentLevel(Enchantment.SWEEPING_EDGE) * 5;
+
+        final Vector3d windBack = new Vector3d(0, -(windBackRotY + offset), 0);
+        final Vector3d attack = new Vector3d(0, attackRotY + offset, 0);
 
         // TODO separate windBack and attack
 
