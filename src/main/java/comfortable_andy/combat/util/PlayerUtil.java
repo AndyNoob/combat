@@ -175,7 +175,7 @@ public class PlayerUtil {
 
                     if (!damagedItem.get() && !player.getGameMode().isInvulnerable()) {
                         player.damageItemStack(item, 1);
-                        damagedItem.set(false);
+                        damagedItem.set(true);
                     }
 
                     if (!updatedExhaust.get()) {
