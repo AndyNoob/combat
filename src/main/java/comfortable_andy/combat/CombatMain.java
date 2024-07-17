@@ -197,17 +197,17 @@ public final class CombatMain extends JavaPlugin implements Listener {
                 return;
             }
         }
-        final boolean cancel = runAction(event.getPlayer(), event.getAction().isLeftClick() ? IAction.ActionType.ATTACK : IAction.ActionType.INTERACT);
+        final boolean cancel = runAction(event.getPlayer(), event.getAction().isLeftClick() ? IAction.ActionType.ATTACK : IAction.ActionType.INTERACT, event.getClickedBlock() != null);
         if (cancel && event.getAction() != Action.LEFT_CLICK_BLOCK) event.setCancelled(true);
     }
 
-    private boolean runAction(Player player, IAction.ActionType actionType) {
+    private boolean runAction(Player player, IAction.ActionType actionType, boolean clickedBlock) {
         if (player.getGameMode() == GameMode.SPECTATOR) return false;
         final CombatPlayerData data = getData(player);
         final boolean isAttack = actionType == IAction.ActionType.ATTACK;
         if (!isAttack) {
             player.swingOffHand();
-            interactBlacklist.add(player);
+            if (!clickedBlock) interactBlacklist.add(player);
         }
         for (IAction action : actions) {
             if (action.tryActivate(player, data, actionType) == IAction.ActionResult.ACTIVATED) {
@@ -224,7 +224,7 @@ public final class CombatMain extends JavaPlugin implements Listener {
     public void onPlayerAttack(PrePlayerAttackEntityEvent e) {
         if (!enabled) return;
         e.setCancelled(true);
-        runAction(e.getPlayer(), IAction.ActionType.ATTACK);
+        runAction(e.getPlayer(), IAction.ActionType.ATTACK, false);
     }
 
     public void debug(Object... stuff) {
