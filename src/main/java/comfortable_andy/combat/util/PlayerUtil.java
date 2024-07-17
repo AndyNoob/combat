@@ -8,6 +8,7 @@ import net.kyori.adventure.key.Key;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.Item;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
@@ -24,6 +25,7 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Damageable;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.event.entity.EntityExhaustionEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffectType;
@@ -61,6 +63,7 @@ public class PlayerUtil {
         }
         final AtomicBoolean damagedItem = new AtomicBoolean();
         final AtomicBoolean sentStrongKnockBack = new AtomicBoolean();
+        final AtomicBoolean updatedExhaustAndStat = new AtomicBoolean();
         final double knockBack = getKnockBack(player, slot) + (strengthScale > 0.9 && player.isSprinting() ? 1 : 0) + item.getEnchantmentLevel(Enchantment.KNOCKBACK);
         final double finalDamage = damage * damageMod;
         final int impalingLevel = item.getEnchantmentLevel(Enchantment.IMPALING);
@@ -112,8 +115,6 @@ public class PlayerUtil {
                     if (critical) {
                         ((CraftDamageSource) source).getHandle().critical();
                         finalFinalDamage *= 1.5;
-                        world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_CRIT, 1, 1);
-                        playerHandle.crit(((CraftEntity) damaged).getHandle());
                     }
                     if (player.isSprinting() && !sentStrongKnockBack.get()) {
                         world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_KNOCKBACK, 1, 1);
@@ -125,28 +126,44 @@ public class PlayerUtil {
                             source
                     );
                     final double actualDamage = hpBefore - damaged.getHealth();
-                    if (!critical) {
-                        if (actualDamage > 0 && strengthScale > 0.9)
+                    if (!(actualDamage > 0)) {
+                        world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_NODAMAGE, 1, 1);
+                        return;
+                    }
+
+                    final Entity damagedHandle = ((CraftEntity) damaged).getHandle();
+                    if (critical) {
+                        world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_CRIT, 1, 1);
+                        playerHandle.crit(damagedHandle);
+                    } else {
+                        if (strengthScale > 0.9)
                             world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_STRONG, 1, 1);
                         else world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_WEAK, 1, 1);
                     }
-                    if (actualDamage > 0) {
-                        player.incrementStatistic(Statistic.DAMAGE_DEALT, (int) Math.round(actualDamage * 10));
-                        final int hearts = (int) (actualDamage / 2);
-                        world.spawnParticle(
-                                Particle.DAMAGE_INDICATOR,
-                                damaged.getLocation().add(0, damaged.getBoundingBox().getHeight() / 2, 0),
-                                hearts,
-                                0.1,
-                                0.0,
-                                0.1,
-                                0.2
-                        );
+                    if (mod > 0) {
+                        playerHandle.magicCrit(damagedHandle);
                     }
+                    player.incrementStatistic(Statistic.DAMAGE_DEALT, (int) Math.round(actualDamage * 10));
+                    final int hearts = (int) (actualDamage / 2);
+                    world.spawnParticle(
+                            Particle.DAMAGE_INDICATOR,
+                            damaged.getLocation().add(0, damaged.getBoundingBox().getHeight() / 2, 0),
+                            hearts,
+                            0.1,
+                            0.0,
+                            0.1,
+                            0.2
+                    );
 
                     if (!damagedItem.get() && !player.getGameMode().isInvulnerable()) {
                         player.damageItemStack(item, 1);
                         damagedItem.set(false);
+                    }
+
+                    if (!updatedExhaustAndStat.get()) {
+                        playerHandle.causeFoodExhaustion(level.spigotConfig.combatExhaustion, EntityExhaustionEvent.ExhaustionReason.ATTACK);
+                        player.incrementStatistic(Statistic.USE_ITEM, item.getType());
+                        updatedExhaustAndStat.set(true);
                     }
                 }
         );
