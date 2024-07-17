@@ -84,8 +84,10 @@ public class PlayerUtil {
                     final WorldConfiguration paperConfig = level.paperConfig();
                     final ServerPlayer playerHandle = ((CraftPlayer) player).getHandle();
                     if (knockBack > 0 && damaged instanceof LivingEntity e) {
-                        if (!paperConfig.misc.disableSprintInterruptionOnAttack)
+                        playerHandle.setDeltaMovement(playerHandle.getDeltaMovement().multiply(0.6, 1, 0.6));
+                        if (!paperConfig.misc.disableSprintInterruptionOnAttack) {
                             player.setSprinting(false);
+                        }
                         ((CraftLivingEntity) e).getHandle().knockback(
                                 knockBack,
                                 -mtv.getX(),
