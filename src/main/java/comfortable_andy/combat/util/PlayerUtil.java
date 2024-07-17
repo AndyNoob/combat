@@ -10,6 +10,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
@@ -19,6 +20,7 @@ import org.bukkit.craftbukkit.damage.CraftDamageSource;
 import org.bukkit.craftbukkit.entity.CraftEntity;
 import org.bukkit.craftbukkit.entity.CraftLivingEntity;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
+import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.bukkit.damage.DamageSource;
 import org.bukkit.damage.DamageType;
 import org.bukkit.enchantments.Enchantment;
@@ -63,12 +65,9 @@ public class PlayerUtil {
         }
         final AtomicBoolean damagedItem = new AtomicBoolean();
         final AtomicBoolean sentStrongKnockBack = new AtomicBoolean();
-        final AtomicBoolean updatedExhaustAndStat = new AtomicBoolean();
+        final AtomicBoolean updatedExhaust = new AtomicBoolean();
         final double knockBack = getKnockBack(player, slot) + (strengthScale > 0.9 && player.isSprinting() ? 1 : 0) + item.getEnchantmentLevel(Enchantment.KNOCKBACK);
         final double finalDamage = damage * damageMod;
-        final int impalingLevel = item.getEnchantmentLevel(Enchantment.IMPALING);
-        final int arthropodLevel = item.getEnchantmentLevel(Enchantment.BANE_OF_ARTHROPODS);
-        final int smiteLevel = item.getEnchantmentLevel(Enchantment.SMITE);
         PlayerUtil.sweep(
                 player::getEyeLocation,
                 PlayerUtil.getReach(player),
@@ -95,25 +94,23 @@ public class PlayerUtil {
                                 EntityKnockbackEvent.Cause.ENTITY_ATTACK
                         );
                     }
-                    double mod = 0;
-
-                    if (Tag.ENTITY_TYPES_SENSITIVE_TO_SMITE.isTagged(damaged.getType()))
-                        mod += smiteLevel * 2.5 * strengthScale;
-                    if (Tag.ENTITY_TYPES_SENSITIVE_TO_BANE_OF_ARTHROPODS.isTagged(damaged.getType()))
-                        mod += arthropodLevel * 2.5 * strengthScale;
-                    if (Tag.ENTITY_TYPES_SENSITIVE_TO_IMPALING.isTagged(damaged.getType()))
-                        mod += impalingLevel * 2.5 * strengthScale;
-
                     final DamageSource source = DamageSource
                             .builder(DamageType.PLAYER_ATTACK)
                             .withCausingEntity(player)
                             .withDirectEntity(player)
                             .build();
+                    final Entity damagedHandle = ((CraftEntity) damaged).getHandle();
+                    net.minecraft.world.damagesource.DamageSource sourceHandle = ((CraftDamageSource) source).getHandle();
+                    net.minecraft.world.item.ItemStack nmsItemStack = CraftItemStack.asNMSCopy(item);
+                    Item nmsItem = nmsItemStack.getItem();
+                    final double mod = nmsItem
+                            .getAttackDamageBonus(damagedHandle, (float) finalDamage, sourceHandle);
+
                     @SuppressWarnings("deprecation") final boolean critical = strengthScale > 0.9 && !player.isClimbing() && player.getFallDistance() > 0 && !player.isOnGround() && !player.isInWater() && !player.isSprinting() && !player.isInsideVehicle() && !player.hasPotionEffect(PotionEffectType.BLINDNESS) && !paperConfig.entities.behavior.disablePlayerCrits;
                     double finalFinalDamage = finalDamage + mod / steps;
                     final Location location = player.getLocation();
                     if (critical) {
-                        ((CraftDamageSource) source).getHandle().critical();
+                        sourceHandle.critical();
                         finalFinalDamage *= 1.5;
                     }
                     if (player.isSprinting() && !sentStrongKnockBack.get()) {
@@ -125,13 +122,34 @@ public class PlayerUtil {
                             finalFinalDamage,
                             source
                     );
+                    boolean doPost = false;
+                    if (damaged instanceof LivingEntity livingEntity) {
+                        doPost = nmsItem.hurtEnemy(
+                                nmsItemStack,
+                                ((CraftLivingEntity) livingEntity).getHandle(),
+                                playerHandle
+                        );
+                        EnchantmentHelper.doPostAttackEffects(
+                                level,
+                                damagedHandle,
+                                sourceHandle
+                        );
+                    }
+
                     final double actualDamage = hpBefore - damaged.getHealth();
+
+                    if (doPost)
+                        nmsItem.postHurtEnemy(
+                                nmsItemStack,
+                                (net.minecraft.world.entity.LivingEntity) damagedHandle,
+                                playerHandle
+                        );
+
                     if (!(actualDamage > 0)) {
                         world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_NODAMAGE, 1, 1);
                         return;
                     }
 
-                    final Entity damagedHandle = ((CraftEntity) damaged).getHandle();
                     if (critical) {
                         world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_CRIT, 1, 1);
                         playerHandle.crit(damagedHandle);
@@ -160,10 +178,9 @@ public class PlayerUtil {
                         damagedItem.set(false);
                     }
 
-                    if (!updatedExhaustAndStat.get()) {
+                    if (!updatedExhaust.get()) {
                         playerHandle.causeFoodExhaustion(level.spigotConfig.combatExhaustion, EntityExhaustionEvent.ExhaustionReason.ATTACK);
-                        player.incrementStatistic(Statistic.USE_ITEM, item.getType());
-                        updatedExhaustAndStat.set(true);
+                        updatedExhaust.set(true);
                     }
                 }
         );
