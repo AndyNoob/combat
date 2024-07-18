@@ -10,7 +10,6 @@ import org.joml.Vector2f;
 import java.util.List;
 import java.util.Vector;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static comfortable_andy.combat.util.VecUtil.FORMAT;
@@ -65,14 +64,14 @@ public class CombatPlayerData {
                 Vector2f::new,
                 this.lastCameraAngles,
                 Vector2f::add,
-                Vector2f::negate,
+                (v, sub) -> v.set(degreesDifference(v.x, sub.x), degreesDifference(v.y, sub.y)),
                 (v, n) -> v.div(n.floatValue())
         );
     }
 
     private void enterPos(Location loc) {
         if (lastWorld != loc.getWorld()) lastPositions.clear();
-        this.lastPositions.add(loc.toVector());
+        this.lastPositions.add(0, loc.toVector());
         this.lastPositions.setSize(CACHE_COUNT);
     }
 
@@ -81,7 +80,7 @@ public class CombatPlayerData {
                 org.bukkit.util.Vector::new,
                 this.lastPositions,
                 org.bukkit.util.Vector::add,
-                v -> v.multiply(-1),
+                org.bukkit.util.Vector::subtract,
                 (v, n) -> v.divide(new org.bukkit.util.Vector(n.floatValue(), n.floatValue(), n.floatValue()))
         );
     }
@@ -89,7 +88,7 @@ public class CombatPlayerData {
     /**
      * @return average camera angle delta from up to the last {@link #CACHE_COUNT} ticks, where x-axis is yaw (rotX) and y-axis is pitch (rotY)
      */
-    private <Vec> Vec average(Supplier<Vec> vecSupplier, List<Vec> list, BiFunction<Vec, Vec, Vec> add, Function<Vec, Vec> negate, BiFunction<Vec, Number, Vec> multi) {
+    private <Vec> Vec average(Supplier<Vec> vecSupplier, List<Vec> list, BiFunction<Vec, Vec, Vec> add, BiFunction<Vec, Vec, Vec> sub, BiFunction<Vec, Number, Vec> div) {
         final Vec accumulator = vecSupplier.get();
         final int size = list.size();
         for (int i = 1; i < size; i++) {
@@ -98,10 +97,10 @@ public class CombatPlayerData {
             final Vec last = list.get(i - 1);
             final Vec lastToCur = vecSupplier.get();
             add.apply(lastToCur, cur);
-            add.apply(lastToCur, negate.apply(last));
+            sub.apply(lastToCur, last);
             add.apply(accumulator, lastToCur);
         }
-        return multi.apply(accumulator, size > 0 ? 1 / size : 1);
+        return div.apply(accumulator, size > 0 ? size : 1);
     }
 
     public long getCooldown(boolean main) {
