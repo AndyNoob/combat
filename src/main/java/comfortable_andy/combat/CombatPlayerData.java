@@ -14,6 +14,8 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static comfortable_andy.combat.util.VecUtil.FORMAT;
+import static comfortable_andy.combat.util.VecUtil.fromBukkit;
+import static net.minecraft.util.Mth.degreesDifference;
 
 public class CombatPlayerData {
 
@@ -43,7 +45,7 @@ public class CombatPlayerData {
         this.attackDelayLeft = this.attackDelayLeft.mapFirst(a -> Math.max(0, a - 1)).mapSecond(a -> Math.max(0, a - 1));
         if (CombatMain.getInstance().isShowActionBarDebug()) {
             this.player.sendActionBar("cam delta: " + averageCameraAngleDelta().toString(FORMAT) +
-                    " pos delta: " + averagePosDelta() +
+                    " pos delta: " + fromBukkit(averagePosDelta()).toString(FORMAT) +
                     " cd cd: " + attackDelayLeft.toString()
             );
         }
