@@ -163,7 +163,8 @@ public class PlayerUtil {
                     if (mod > 0) {
                         playerHandle.magicCrit(damagedHandle);
                     }
-                    player.incrementStatistic(Statistic.DAMAGE_DEALT, (int) Math.round(actualDamage * 10));
+                    final int addingToStat = (int) Math.round(actualDamage * 10);
+                    if (addingToStat > 0) player.incrementStatistic(Statistic.DAMAGE_DEALT, addingToStat);
                     final int hearts = (int) (actualDamage / 2);
                     world.spawnParticle(
                             Particle.DAMAGE_INDICATOR,
