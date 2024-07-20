@@ -257,8 +257,11 @@ public class PlayerUtil {
                         })
                         .collidesWithOthers(collide)
                         .collidedWithOther((box, info) -> {
-                            if (owner != info.getOwner())
+                            if (owner != info.getOwner()) {
                                 world.playSound(loc, Sound.BLOCK_ANVIL_PLACE, 1, 1);
+                                return true;
+                            }
+                            return false;
                         })
                         .ticks(Math.max(1, steps))
                         .build()

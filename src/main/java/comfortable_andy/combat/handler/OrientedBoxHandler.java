@@ -9,6 +9,7 @@ import org.bukkit.util.Vector;
 
 import java.util.*;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -38,8 +39,8 @@ public class OrientedBoxHandler extends BukkitRunnable {
             final OrientedBox box = entry.getKey();
             final OrientedBox collidedBox = collidingBoxes.stream().filter(b -> b != box && !b.collides(box, (c, d) -> 0).isEmpty()).findFirst().orElse(null);
             if (info.collidesWithOthers && collidedBox != null) {
-                info.collidedWithOther.accept(collidedBox, boxes.get(collidedBox));
-                continue;
+                if (info.collidedWithOther.apply(collidedBox, boxes.get(collidedBox)))
+                    continue;
             } else {
                 for (Map.Entry<?, OrientedBox> checkEntry : info.boxSupplier.get().entrySet()) {
                     final List<Vector> mtvs = box.collides(checkEntry.getValue(), info.mtvComparator);
@@ -68,7 +69,7 @@ public class OrientedBoxHandler extends BukkitRunnable {
         private final Runnable postTickCallback;
         private final Comparator<Vector> mtvComparator;
         private final boolean collidesWithOthers;
-        private final BiConsumer<OrientedBox, BoxInfo<?>> collidedWithOther;
+        private final BiFunction<OrientedBox, BoxInfo<?>, Boolean> collidedWithOther;
         private int ticks;
 
     }
