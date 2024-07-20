@@ -8,7 +8,6 @@ import net.kyori.adventure.key.Key;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import org.bukkit.*;
@@ -24,7 +23,7 @@ import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.bukkit.damage.DamageSource;
 import org.bukkit.damage.DamageType;
 import org.bukkit.enchantments.Enchantment;
-import org.bukkit.entity.Damageable;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityExhaustionEvent;
@@ -80,10 +79,10 @@ public class PlayerUtil {
                 attack,
                 steps,
                 steps <= 1 ? 1 : ceil(ticks / (steps + 0d)),
-                (damaged, mtv) -> {
-                    if (damaged == player) return;
-                    if (!player.hasLineOfSight(damaged)) return;
-                    if (knockBack > 0 && damaged instanceof LivingEntity e) {
+                (entity, mtv) -> {
+                    if (entity == player) return;
+                    if (!player.hasLineOfSight(entity)) return;
+                    if (knockBack > 0 && entity instanceof LivingEntity e) {
                         playerHandle.setDeltaMovement(playerHandle.getDeltaMovement().multiply(0.6, 1, 0.6));
                         if (!paperConfig.misc.disableSprintInterruptionOnAttack) {
                             player.setSprinting(false);
@@ -101,12 +100,12 @@ public class PlayerUtil {
                             .withCausingEntity(player)
                             .withDirectEntity(player)
                             .build();
-                    final Entity damagedHandle = ((CraftEntity) damaged).getHandle();
+                    final var entityHandle = ((CraftEntity) entity).getHandle();
                     net.minecraft.world.damagesource.DamageSource sourceHandle = ((CraftDamageSource) source).getHandle();
                     net.minecraft.world.item.ItemStack nmsItemStack = CraftItemStack.asNMSCopy(item);
                     Item nmsItem = nmsItemStack.getItem();
                     final double mod = nmsItem
-                            .getAttackDamageBonus(damagedHandle, (float) finalDamage, sourceHandle);
+                            .getAttackDamageBonus(entityHandle, (float) finalDamage, sourceHandle);
 
                     @SuppressWarnings("deprecation") final boolean critical = strengthScale > 0.9 && !player.isClimbing() && player.getFallDistance() > 0 && !player.isOnGround() && !player.isInWater() && !player.isSprinting() && !player.isInsideVehicle() && !player.hasPotionEffect(PotionEffectType.BLINDNESS) && !paperConfig.entities.behavior.disablePlayerCrits;
                     double finalFinalDamage = finalDamage + mod / steps;
@@ -119,13 +118,13 @@ public class PlayerUtil {
                         world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_KNOCKBACK, 1, 1);
                         sentStrongKnockBack.set(true);
                     }
-                    final double hpBefore = damaged.getHealth();
-                    damaged.damage(
-                            finalFinalDamage,
-                            source
+                    final double hpBefore = entity instanceof LivingEntity le ? le.getHealth() : -1;
+                    final boolean hurt = entityHandle.hurt(
+                            sourceHandle,
+                            (float) finalFinalDamage
                     );
                     boolean doPost = false;
-                    if (damaged instanceof LivingEntity livingEntity) {
+                    if (entity instanceof LivingEntity livingEntity) {
                         doPost = nmsItem.hurtEnemy(
                                 nmsItemStack,
                                 ((CraftLivingEntity) livingEntity).getHandle(),
@@ -133,48 +132,49 @@ public class PlayerUtil {
                         );
                         EnchantmentHelper.doPostAttackEffects(
                                 level,
-                                damagedHandle,
+                                entityHandle,
                                 sourceHandle
                         );
                     }
 
-                    final double actualDamage = hpBefore - damaged.getHealth();
-
                     if (doPost)
                         nmsItem.postHurtEnemy(
                                 nmsItemStack,
-                                (net.minecraft.world.entity.LivingEntity) damagedHandle,
+                                (net.minecraft.world.entity.LivingEntity) entityHandle,
                                 playerHandle
                         );
 
-                    if (!(actualDamage > 0)) {
+                    if (!(hurt)) {
                         world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_NODAMAGE, 1, 1);
                         return;
                     }
 
                     if (critical) {
                         world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_CRIT, 1, 1);
-                        playerHandle.crit(damagedHandle);
+                        playerHandle.crit(entityHandle);
                     } else {
                         if (strengthScale > 0.9)
                             world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_STRONG, 1, 1);
                         else world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_WEAK, 1, 1);
                     }
                     if (mod > 0) {
-                        playerHandle.magicCrit(damagedHandle);
+                        playerHandle.magicCrit(entityHandle);
                     }
-                    final int addingToStat = (int) Math.round(actualDamage * 10);
-                    if (addingToStat > 0) player.incrementStatistic(Statistic.DAMAGE_DEALT, addingToStat);
-                    final int hearts = (int) (actualDamage / 2);
-                    world.spawnParticle(
-                            Particle.DAMAGE_INDICATOR,
-                            damaged.getLocation().add(0, damaged.getBoundingBox().getHeight() / 2, 0),
-                            hearts,
-                            0.1,
-                            0.0,
-                            0.1,
-                            0.2
-                    );
+                    if (hpBefore != -1) {
+                        final double actualDamage = hpBefore - ((LivingEntity) entity).getHealth();
+                        final int addingToStat = (int) Math.round(actualDamage * 10);
+                        if (addingToStat > 0) player.incrementStatistic(Statistic.DAMAGE_DEALT, addingToStat);
+                        final int hearts = (int) (actualDamage / 2);
+
+                        world.spawnParticle(
+                                Particle.DAMAGE_INDICATOR,
+                                entity.getLocation().add(0, entity.getBoundingBox().getHeight() / 2, 0),
+                                hearts,
+                                0.1,
+                                0.0,
+                                0.1,
+                                0.2
+                        );
 
                     }
 
@@ -193,7 +193,7 @@ public class PlayerUtil {
      * @param delta    this added to {@code start}
      * @param steps    how many steps
      */
-    public static void sweep(Object owner, Supplier<Location> supplier, float reach, float size, Quaterniond start, Vector3d delta, int steps, int ticksPerStep, BiConsumer<Damageable, Vector> callback, boolean collide) {
+    public static void sweep(Object owner, Supplier<Location> supplier, float reach, float size, Quaterniond start, Vector3d delta, int steps, int ticksPerStep, BiConsumer<Entity, Vector> callback, boolean collide) {
         Location loc = supplier.get().clone();
 
         final float halfSize = size / 2;
@@ -211,14 +211,14 @@ public class PlayerUtil {
         final Quaterniond step = rotateLocal(new Quaterniond(), rawStep, attackBox.getAxis());
 
         if (steps <= 1) attackBox.rotateBy(step);
-        final Map<Damageable, OrientedBox> possible = new ConcurrentHashMap<>();
+        final Map<Entity, OrientedBox> possible = new ConcurrentHashMap<>();
         final World world = loc.getWorld();
         final AtomicReference<Vector> direction = new AtomicReference<>();
         final AtomicInteger ticker = new AtomicInteger(0);
 
         CombatMain.getInstance().boxHandler.addBox(
                 attackBox,
-                OrientedBoxHandler.BoxInfo.<Damageable>builder()
+                OrientedBoxHandler.BoxInfo.<Entity>builder()
                         .owner(owner)
                         .boxSupplier(() -> {
                             possible.forEach((e, box) ->
@@ -265,13 +265,13 @@ public class PlayerUtil {
     }
 
     @NotNull
-    private static Map<Damageable, OrientedBox> collectNearby(
+    private static Map<Entity, OrientedBox> collectNearby(
             float reach,
             Location curLoc,
-            Collection<Damageable> excluding
+            Collection<Entity> excluding
     ) {
         return curLoc
-                .getNearbyEntitiesByType(Damageable.class, reach)
+                .getNearbyEntitiesByType(Entity.class, reach)
                 .stream()
                 .filter(e -> !excluding.contains(e))
                 .collect(HashMap::new, (m, d) -> m.put(d, new OrientedBox(d.getBoundingBox())), HashMap::putAll);
