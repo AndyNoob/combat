@@ -32,7 +32,8 @@ public class BashAction extends SweepingAction {
                 isAttack,
                 speedMultiplier,
                 damageMultiplierPerStep,
-                data.getCooldown(isAttack)
+                data.getCooldown(isAttack),
+                data.averagePosDelta()
         );
         player.getWorld().playSound(player.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, 1, 1);
     }

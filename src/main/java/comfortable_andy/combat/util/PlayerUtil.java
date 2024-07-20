@@ -51,7 +51,7 @@ import static org.bukkit.util.NumberConversions.ceil;
 public class PlayerUtil {
 
     @SuppressWarnings("UnstableApiUsage")
-    public static void doSweep(Player player, Quaterniond start, Vector3d attack, int steps, boolean isAttack, double speedMod, double damageMod, long ticksLeft) {
+    public static void doSweep(Player player, Quaterniond start, Vector3d attack, int steps, boolean isAttack, double speedMod, double damageMod, long ticksLeft, Vector originOffset) {
         final EquipmentSlot slot = isAttack ? EquipmentSlot.HAND : EquipmentSlot.OFF_HAND;
         final double cd = getCd(player, slot);
         final int ticks = ceil(cd * speedMod);
@@ -72,7 +72,7 @@ public class PlayerUtil {
         final ServerPlayer playerHandle = ((CraftPlayer) player).getHandle();
         PlayerUtil.sweep(
                 player,
-                player::getEyeLocation,
+                () -> player.getEyeLocation().add(originOffset),
                 PlayerUtil.getReach(player),
                 1,
                 start,
