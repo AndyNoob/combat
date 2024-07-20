@@ -79,7 +79,7 @@ public class PlayerUtil {
                 start,
                 attack,
                 steps,
-                ceil(ticks / (steps + 0d)),
+                steps <= 1 ? 1 : ceil(ticks / (steps + 0d)),
                 (damaged, mtv) -> {
                     if (damaged == player) return;
                     if (!player.hasLineOfSight(damaged)) return;
