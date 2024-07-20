@@ -125,8 +125,7 @@ public class PlayerUtil {
                     );
                     boolean doPost = false;
                     if (entity instanceof LivingEntity livingEntity) {
-                        doPost = nmsItem.hurtEnemy(
-                                nmsItemStack,
+                        doPost = nmsItemStack.hurtEnemy(
                                 ((CraftLivingEntity) livingEntity).getHandle(),
                                 playerHandle
                         );
@@ -138,8 +137,7 @@ public class PlayerUtil {
                     }
 
                     if (doPost)
-                        nmsItem.postHurtEnemy(
-                                nmsItemStack,
+                        nmsItemStack.postHurtEnemy(
                                 (net.minecraft.world.entity.LivingEntity) entityHandle,
                                 playerHandle
                         );
