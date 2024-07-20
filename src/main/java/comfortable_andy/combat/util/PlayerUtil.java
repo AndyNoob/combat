@@ -63,7 +63,6 @@ public class PlayerUtil {
         if (sharpness > 0) {
             damage += (0.5 * sharpness + 0.5) * strengthScale;
         }
-        final AtomicBoolean damagedItem = new AtomicBoolean();
         final AtomicBoolean sentStrongKnockBack = new AtomicBoolean();
         final AtomicBoolean updatedExhaust = new AtomicBoolean();
         final double knockBack = getKnockBack(player, slot) + (strengthScale > 0.9 && player.isSprinting() ? 1 : 0) + item.getEnchantmentLevel(Enchantment.KNOCKBACK);
@@ -177,9 +176,6 @@ public class PlayerUtil {
                             0.2
                     );
 
-                    if (!damagedItem.get() && !player.getGameMode().isInvulnerable()) {
-                        player.damageItemStack(item, 1);
-                        damagedItem.set(true);
                     }
 
                     if (!updatedExhaust.get()) {
