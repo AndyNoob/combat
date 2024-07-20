@@ -16,6 +16,9 @@ right-click-blacklist:
   - TRIDENT
   - FIREWORK_ROCKET
   - SHIELD
+  - PAINTING
+  - ITEM_FRAME
+  - GLOW_ITEM_FRAME
 block-food-right-click: true
 block-block-right-click: true
 block-armor-right-click: true
