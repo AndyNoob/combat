@@ -73,6 +73,7 @@ public class PlayerUtil {
         final WorldConfiguration paperConfig = level.paperConfig();
         final ServerPlayer playerHandle = ((CraftPlayer) player).getHandle();
         PlayerUtil.sweep(
+                player,
                 player::getEyeLocation,
                 PlayerUtil.getReach(player),
                 1,
@@ -196,7 +197,7 @@ public class PlayerUtil {
      * @param delta    this added to {@code start}
      * @param steps    how many steps
      */
-    public static void sweep(Supplier<Location> supplier, float reach, float size, Quaterniond start, Vector3d delta, int steps, int ticksPerStep, BiConsumer<Damageable, Vector> callback, boolean collide) {
+    public static void sweep(Object owner, Supplier<Location> supplier, float reach, float size, Quaterniond start, Vector3d delta, int steps, int ticksPerStep, BiConsumer<Damageable, Vector> callback, boolean collide) {
         Location loc = supplier.get().clone();
 
         final float halfSize = size / 2;
@@ -222,6 +223,7 @@ public class PlayerUtil {
         CombatMain.getInstance().boxHandler.addBox(
                 attackBox,
                 OrientedBoxHandler.BoxInfo.<Damageable>builder()
+                        .owner(owner)
                         .boxSupplier(() -> {
                             possible.forEach((e, box) ->
                                     box.moveBy(
@@ -254,7 +256,10 @@ public class PlayerUtil {
                             attackBox.rotateBy(step);
                         })
                         .collidesWithOthers(collide)
-                        .collidedWithOther(() -> world.playSound(loc, Sound.BLOCK_ANVIL_PLACE, 1, 1))
+                        .collidedWithOther((box, info) -> {
+                            if (owner != info.getOwner())
+                                world.playSound(loc, Sound.BLOCK_ANVIL_PLACE, 1, 1);
+                        })
                         .ticks(Math.max(1, steps))
                         .build()
         );

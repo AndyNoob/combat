@@ -31,12 +31,14 @@ public class OrientedBoxHandler extends BukkitRunnable {
             BoxInfo<?> info = entry.getValue();
             if (!info.tickCheck.apply(info.ticks)) continue;
             if (info.ticks-- <= 0) {
+                collidingBoxes.remove(entry.getKey());
                 iterator.remove();
                 continue;
             }
             final OrientedBox box = entry.getKey();
-            if (info.collidesWithOthers && collidingBoxes.stream().anyMatch(b -> b != box && !b.collides(box, (c, d) -> 0).isEmpty())) {
-                info.collidedWithOther.run();
+            final OrientedBox collidedBox = collidingBoxes.stream().filter(b -> b != box && !b.collides(box, (c, d) -> 0).isEmpty()).findFirst().orElse(null);
+            if (info.collidesWithOthers && collidedBox != null) {
+                info.collidedWithOther.accept(collidedBox, boxes.get(collidedBox));
                 continue;
             } else {
                 for (Map.Entry<?, OrientedBox> checkEntry : info.boxSupplier.get().entrySet()) {
@@ -59,13 +61,14 @@ public class OrientedBoxHandler extends BukkitRunnable {
     @AllArgsConstructor
     public static final class BoxInfo<E> {
 
+        private final Object owner;
         private final Supplier<Map<E, OrientedBox>> boxSupplier;
         private final BiConsumer<E, Vector> collideCallback;
         private final Function<Integer, Boolean> tickCheck;
         private final Runnable postTickCallback;
         private final Comparator<Vector> mtvComparator;
         private final boolean collidesWithOthers;
-        private final Runnable collidedWithOther;
+        private final BiConsumer<OrientedBox, BoxInfo<?>> collidedWithOther;
         private int ticks;
 
     }
