@@ -11,6 +11,7 @@ import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 public class OrientedBoxHandler extends BukkitRunnable {
 
@@ -20,6 +21,11 @@ public class OrientedBoxHandler extends BukkitRunnable {
     @Override
     public void run() {
         final Iterator<Map.Entry<OrientedBox, BoxInfo<?>>> iterator = boxes.entrySet().iterator();
+        final Set<OrientedBox> collidingBoxes = boxes.entrySet()
+                .stream()
+                .filter(e -> e.getValue().collidesWithOthers)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toSet());
         while (iterator.hasNext()) {
             final Map.Entry<OrientedBox, BoxInfo<?>> entry = iterator.next();
             BoxInfo<?> info = entry.getValue();
@@ -29,11 +35,16 @@ public class OrientedBoxHandler extends BukkitRunnable {
                 continue;
             }
             final OrientedBox box = entry.getKey();
-            for (Map.Entry<?, OrientedBox> checkEntry : info.boxSupplier.get().entrySet()) {
-                final List<Vector> mtvs = box.collides(checkEntry.getValue(), info.mtvComparator);
-                if (mtvs.isEmpty()) continue;
-                ((BiConsumer<Object, Vector>) info.collideCallback)
-                        .accept(checkEntry.getKey(), mtvs.get(0));
+            if (info.collidesWithOthers && collidingBoxes.stream().anyMatch(b -> b != box && !b.collides(box, (c, d) -> 0).isEmpty())) {
+                info.collidedWithOther.run();
+                continue;
+            } else {
+                for (Map.Entry<?, OrientedBox> checkEntry : info.boxSupplier.get().entrySet()) {
+                    final List<Vector> mtvs = box.collides(checkEntry.getValue(), info.mtvComparator);
+                    if (mtvs.isEmpty()) continue;
+                    ((BiConsumer<Object, Vector>) info.collideCallback)
+                            .accept(checkEntry.getKey(), mtvs.get(0));
+                }
             }
             info.postTickCallback.run();
         }
@@ -53,6 +64,8 @@ public class OrientedBoxHandler extends BukkitRunnable {
         private final Function<Integer, Boolean> tickCheck;
         private final Runnable postTickCallback;
         private final Comparator<Vector> mtvComparator;
+        private final boolean collidesWithOthers;
+        private final Runnable collidedWithOther;
         private int ticks;
 
     }

@@ -185,7 +185,8 @@ public class PlayerUtil {
                         playerHandle.causeFoodExhaustion(level.spigotConfig.combatExhaustion, EntityExhaustionEvent.ExhaustionReason.ATTACK);
                         updatedExhaust.set(true);
                     }
-                }
+                },
+                strengthScale > 0.9
         );
     }
 
@@ -195,7 +196,7 @@ public class PlayerUtil {
      * @param delta    this added to {@code start}
      * @param steps    how many steps
      */
-    public static void sweep(Supplier<Location> supplier, float reach, float size, Quaterniond start, Vector3d delta, int steps, int ticksPerStep, BiConsumer<Damageable, Vector> callback) {
+    public static void sweep(Supplier<Location> supplier, float reach, float size, Quaterniond start, Vector3d delta, int steps, int ticksPerStep, BiConsumer<Damageable, Vector> callback, boolean collide) {
         Location loc = supplier.get().clone();
 
         final float halfSize = size / 2;
@@ -252,6 +253,8 @@ public class PlayerUtil {
                                 attackBox.clone().display(world);
                             attackBox.rotateBy(step);
                         })
+                        .collidesWithOthers(collide)
+                        .collidedWithOther(() -> world.playSound(loc, Sound.BLOCK_ANVIL_PLACE, 1, 1))
                         .ticks(Math.max(1, steps))
                         .build()
         );
