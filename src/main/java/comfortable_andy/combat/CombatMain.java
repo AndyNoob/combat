@@ -128,7 +128,7 @@ public final class CombatMain extends JavaPlugin implements Listener {
         return INSTANCE;
     }
 
-    private final Set<Player> interactBlacklist = Collections.synchronizedSet(new HashSet<>());
+    public final Set<Player> interactBlacklist = Collections.synchronizedSet(new HashSet<>());
 
     private void tempBlacklist(Player player) {
         interactBlacklist.add(player);

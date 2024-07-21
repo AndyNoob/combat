@@ -45,7 +45,8 @@ public class CombatPlayerData {
         if (CombatMain.getInstance().isShowActionBarDebug()) {
             this.player.sendActionBar("cam delta: " + averageCameraAngleDelta().toString(FORMAT) +
                     " pos delta: " + fromBukkit(averagePosDelta()).toString(FORMAT) +
-                    " cd cd: " + attackDelayLeft.toString()
+                    " cd cd: " + attackDelayLeft.toString() +
+                    " blacklist: " + CombatMain.getInstance().interactBlacklist.contains(player)
             );
         }
         this.lastWorld = location.getWorld();
