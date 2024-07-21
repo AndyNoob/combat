@@ -25,3 +25,8 @@ block-armor-right-click: true
 block-bucket-right-click: true
 
 box-display-particle: false
+
+# should the plugin add the player camera's rotation speed to the attack origin
+# this has very similar effects to editing wind back but seems to help with hitting
+# sweeps in testing and therefore is on by default
+compensate-camera-movement: true

@@ -1,6 +1,7 @@
 package comfortable_andy.combat.util;
 
 import comfortable_andy.combat.CombatMain;
+import comfortable_andy.combat.CombatPlayerData;
 import comfortable_andy.combat.handler.OrientedBoxHandler;
 import io.papermc.paper.configuration.WorldConfiguration;
 import io.papermc.paper.event.entity.EntityKnockbackEvent;
@@ -35,6 +36,7 @@ import org.bukkit.util.Vector;
 import org.intellij.lang.annotations.Subst;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Quaterniond;
+import org.joml.Vector2f;
 import org.joml.Vector3d;
 
 import java.util.*;
@@ -51,7 +53,7 @@ import static org.bukkit.util.NumberConversions.ceil;
 public class PlayerUtil {
 
     @SuppressWarnings("UnstableApiUsage")
-    public static void doSweep(Player player, Quaterniond start, Vector3d attack, int steps, boolean isAttack, double speedMod, double damageMod, long ticksLeft, Vector originOffset) {
+    public static void doSweep(Player player, Quaterniond start, Vector3d attack, int steps, boolean isAttack, double speedMod, double damageMod, long ticksLeft, CombatPlayerData data) {
         final EquipmentSlot slot = isAttack ? EquipmentSlot.HAND : EquipmentSlot.OFF_HAND;
         final double cd = getCd(player, slot);
         final int ticks = ceil(cd * speedMod);
@@ -70,9 +72,13 @@ public class PlayerUtil {
         final ServerLevel level = ((CraftWorld) world).getHandle();
         final WorldConfiguration paperConfig = level.paperConfig();
         final ServerPlayer playerHandle = ((CraftPlayer) player).getHandle();
+        if (CombatMain.getInstance().getConfig().getBoolean("compensate-camera-movement", true)) {
+            Vector2f delta = data.averageCameraAngleDelta();
+            start.mul(new Quaterniond().rotateX(-Math.toRadians(delta.x)).rotateY(Math.toRadians(delta.y)));
+        }
         PlayerUtil.sweep(
                 player,
-                () -> player.getEyeLocation().add(originOffset),
+                () -> player.getEyeLocation().add(data.averagePosDelta()),
                 PlayerUtil.getReach(player),
                 1,
                 start,

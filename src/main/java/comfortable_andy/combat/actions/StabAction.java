@@ -24,7 +24,7 @@ public class StabAction implements IAction {
                 1,
                 1,
                 data.getCooldown(isAttack),
-                data.averagePosDelta()
+                data
         );
         return ActionResult.ACTIVATED;
     }
