@@ -170,16 +170,17 @@ public class PlayerUtil {
                         if (addingToStat > 0) player.incrementStatistic(Statistic.DAMAGE_DEALT, addingToStat);
                         final int hearts = (int) (actualDamage / 2);
 
-                        world.spawnParticle(
-                                Particle.DAMAGE_INDICATOR,
-                                entity.getLocation().add(0, entity.getBoundingBox().getHeight() / 2, 0),
-                                hearts,
-                                0.1,
-                                0.0,
-                                0.1,
-                                0.2
-                        );
-
+                        if (hearts > 0) {
+                            world.spawnParticle(
+                                    Particle.DAMAGE_INDICATOR,
+                                    entity.getLocation().add(0, entity.getBoundingBox().getHeight() / 2, 0),
+                                    hearts,
+                                    0.1,
+                                    0.0,
+                                    0.1,
+                                    0.2
+                            );
+                        }
                     }
 
                     if (!updatedExhaust.get()) {
