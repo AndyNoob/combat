@@ -78,7 +78,7 @@ public class PlayerUtil {
         }
         PlayerUtil.sweep(
                 player,
-                () -> player.getEyeLocation().add(data.averagePosDelta()),
+                () -> player.getEyeLocation().add(data.posDelta()),
                 PlayerUtil.getReach(player),
                 1,
                 start,

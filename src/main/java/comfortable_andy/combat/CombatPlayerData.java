@@ -2,23 +2,44 @@ package comfortable_andy.combat;
 
 import com.mojang.datafixers.util.Pair;
 import lombok.Getter;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.joml.Vector2f;
+import org.joml.Vector3d;
+import org.joml.Vector3f;
 
+import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Vector;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
-import static comfortable_andy.combat.util.VecUtil.FORMAT;
-import static comfortable_andy.combat.util.VecUtil.fromBukkit;
+import static comfortable_andy.combat.util.VecUtil.*;
 import static net.minecraft.util.Mth.degreesDifference;
 
 public class CombatPlayerData {
 
     private static final int CACHE_COUNT = 5;
+    private static final Field FIRST_GOOD_X;
+    private static final Field FIRST_GOOD_Y;
+    private static final Field FIRST_GOOD_Z;
+
+    static {
+        try {
+            FIRST_GOOD_X = ServerGamePacketListenerImpl.class.getDeclaredField("firstGoodX");
+            FIRST_GOOD_Y = ServerGamePacketListenerImpl.class.getDeclaredField("firstGoodY");
+            FIRST_GOOD_Z = ServerGamePacketListenerImpl.class.getDeclaredField("firstGoodZ");
+            FIRST_GOOD_X.trySetAccessible();
+            FIRST_GOOD_Y.trySetAccessible();
+            FIRST_GOOD_Z.trySetAccessible();
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     @Getter
     private final Player player;
@@ -28,7 +49,7 @@ public class CombatPlayerData {
      */
     private final Vector<Vector2f> lastCameraAngles = new Vector<>();
     private World lastWorld = null;
-    private final Vector<org.bukkit.util.Vector> lastPositions = new Vector<>();
+    private Vector3d positionDelta = new Vector3d();
     private Pair<Long, Long> attackDelayLeft = new Pair<>(0L, 0L);
 
     public CombatPlayerData(Player player) {
@@ -40,11 +61,29 @@ public class CombatPlayerData {
         final Location location = this.player.getLocation();
         if (location.getWorld() == null) return;
         this.enterCamera(new Vector2f(location.getPitch(), location.getYaw()));
-        this.enterPos(location);
         this.attackDelayLeft = this.attackDelayLeft.mapFirst(a -> Math.max(0, a - 1)).mapSecond(a -> Math.max(0, a - 1));
+        final ServerPlayer handle = ((CraftPlayer) player).getHandle();
+        final var connection = handle.connection;
+        try {
+            if (lastWorld == location.getWorld()) {
+                final Vector3d firstGood = new Vector3d(
+                        (Double) FIRST_GOOD_X.get(connection),
+                        (Double) FIRST_GOOD_Y.get(connection),
+                        (Double) FIRST_GOOD_Z.get(connection)
+                );
+                final Vector3f pos = handle.position()
+                        .toVector3f();
+                positionDelta = new Vector3d(pos.x, pos.y, pos.z)
+                        .sub(new Vector3d(firstGood.x, firstGood.y, firstGood.z));
+            } else positionDelta = new Vector3d();
+            lastWorld = location.getWorld();
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException(e);
+        }
+
         if (CombatMain.getInstance().isShowActionBarDebug()) {
             this.player.sendActionBar("cam delta: " + averageCameraAngleDelta().toString(FORMAT) +
-                    " pos delta: " + fromBukkit(averagePosDelta()).toString(FORMAT) +
+                    " pos delta: " + fromBukkit(posDelta()).toString(FORMAT) +
                     " cd cd: " + attackDelayLeft.toString() +
                     " blacklist: " + CombatMain.getInstance().interactBlacklist.contains(player)
             );
@@ -70,20 +109,8 @@ public class CombatPlayerData {
         );
     }
 
-    private void enterPos(Location loc) {
-        if (lastWorld != loc.getWorld()) lastPositions.clear();
-        this.lastPositions.add(0, loc.toVector());
-        this.lastPositions.setSize(CACHE_COUNT);
-    }
-
-    public org.bukkit.util.Vector averagePosDelta() {
-        return average(
-                org.bukkit.util.Vector::new,
-                this.lastPositions,
-                org.bukkit.util.Vector::add,
-                org.bukkit.util.Vector::subtract,
-                (v, n) -> v.divide(new org.bukkit.util.Vector(n.floatValue(), n.floatValue(), n.floatValue()))
-        );
+    public org.bukkit.util.Vector posDelta() {
+        return fromJoml(positionDelta);
     }
 
     /**
