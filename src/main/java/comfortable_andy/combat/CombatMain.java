@@ -19,7 +19,9 @@ import lombok.Setter;
 import me.comfortable_andy.mapable.Mapable;
 import me.comfortable_andy.mapable.MapableBuilder;
 import org.bukkit.GameMode;
+import org.bukkit.Material;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -225,7 +227,17 @@ public final class CombatMain extends JavaPlugin implements Listener {
     public void onPlayerAttack(PrePlayerAttackEntityEvent e) {
         if (!enabled) return;
         e.setCancelled(true);
-        runAction(e.getPlayer(), IAction.ActionType.ATTACK, false);
+        IAction.ActionType type = IAction.ActionType.ATTACK;
+        if (e.getPlayer().isRiptiding()) {
+            boolean main = canRiptide(e.getPlayer().getInventory().getItemInMainHand());
+            boolean off = canRiptide(e.getPlayer().getInventory().getItemInOffHand());
+            if (off && !main) type = IAction.ActionType.INTERACT;
+        }
+        runAction(e.getPlayer(), type, false);
+    }
+
+    private boolean canRiptide(ItemStack item) {
+        return item.getType() == Material.TRIDENT && item.getEnchantmentLevel(Enchantment.RIPTIDE) > 0;
     }
 
     public void debug(Object... stuff) {

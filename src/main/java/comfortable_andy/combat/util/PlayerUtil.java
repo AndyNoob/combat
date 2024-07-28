@@ -41,6 +41,7 @@ import org.joml.Quaterniond;
 import org.joml.Vector2f;
 import org.joml.Vector3d;
 
+import java.lang.reflect.Field;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -54,6 +55,17 @@ import static org.bukkit.util.NumberConversions.ceil;
 
 public class PlayerUtil {
 
+    private static final Field AUTO_SPIN_DMG;
+
+    static {
+        try {
+            AUTO_SPIN_DMG = net.minecraft.world.entity.LivingEntity.class.getDeclaredField("autoSpinAttackDmg");
+            AUTO_SPIN_DMG.trySetAccessible();
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     @SuppressWarnings("UnstableApiUsage")
     public static void doSweep(Player player, Quaterniond start, Vector3d attack, int steps, boolean isAttack, double speedMod, double damageMod, long ticksLeft, CombatPlayerData data) {
         final EquipmentSlot slot = isAttack ? EquipmentSlot.HAND : EquipmentSlot.OFF_HAND;
@@ -61,15 +73,20 @@ public class PlayerUtil {
         final int ticks = ceil(cd * speedMod);
         final ItemStack item = player.getInventory().getItem(slot);
         final double strengthScale = Mth.clamp((ticks - ticksLeft + 0.5) / ticks, 0, 1);
-        final double initialDamage = getDmg(player, slot) * (0.2 + strengthScale * strengthScale * 0.8);
         final AtomicBoolean sentStrongKnockBack = new AtomicBoolean();
         final AtomicBoolean updatedExhaust = new AtomicBoolean();
         final double knockBack = getKnockBack(player, slot) + (strengthScale > 0.9 && player.isSprinting() ? 1 : 0) + item.getEnchantmentLevel(Enchantment.KNOCKBACK);
+        final ServerPlayer playerHandle = ((CraftPlayer) player).getHandle();
+        final double initialDamage;
+        try {
+            initialDamage = player.isRiptiding() ? AUTO_SPIN_DMG.getFloat(playerHandle) : getDmg(player, slot) * (0.2 + strengthScale * strengthScale * 0.8);
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException(e);
+        }
         final double finalDamage = initialDamage * damageMod;
         final World world = player.getWorld();
         final ServerLevel level = ((CraftWorld) world).getHandle();
         final WorldConfiguration paperConfig = level.paperConfig();
-        final ServerPlayer playerHandle = ((CraftPlayer) player).getHandle();
         if (CombatMain.getInstance().getConfig().getBoolean("compensate-camera-movement", true)) {
             Vector2f delta = data.averageCameraAngleDelta();
             start.mul(new Quaterniond().rotateX(-Math.toRadians(delta.x)).rotateY(Math.toRadians(delta.y)));
