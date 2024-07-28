@@ -9,6 +9,8 @@ import net.kyori.adventure.key.Key;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
+import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.entity.projectile.ProjectileDeflection;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import org.bukkit.*;
@@ -95,6 +97,13 @@ public class PlayerUtil {
                     if (!entityHandle.isAttackable() || entityHandle.skipAttackInteraction(playerHandle)) return;
                     if (entity instanceof Player pl && pl.getGameMode().isInvulnerable()) return;
                     if (!player.hasLineOfSight(entity)) return;
+                    if (Tag.ENTITY_TYPES_REDIRECTABLE_PROJECTILE.isTagged(entity.getType())) {
+                        // TODO decide if this should call non living damage event
+                        if (((Projectile) entityHandle).deflect(ProjectileDeflection.AIM_DEFLECT, playerHandle, playerHandle, true)) {
+                            world.playSound(player.getLocation(), Sound.ENTITY_PLAYER_ATTACK_NODAMAGE, SoundCategory.PLAYERS, 1, 1);
+                            return;
+                        }
+                    }
                     if (knockBack > 0 && entity instanceof LivingEntity e) {
                         playerHandle.setDeltaMovement(playerHandle.getDeltaMovement().multiply(0.6, 1, 0.6));
                         if (!paperConfig.misc.disableSprintInterruptionOnAttack) {
