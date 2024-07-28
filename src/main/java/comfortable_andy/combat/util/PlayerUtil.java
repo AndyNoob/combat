@@ -77,6 +77,10 @@ public class PlayerUtil {
             start.mul(new Quaterniond().rotateX(-Math.toRadians(delta.x)).rotateY(Math.toRadians(delta.y)));
         }
         data.resetCameraDelta();
+
+        final var nmsStack = CraftItemStack.asNMSCopy(item);
+        final Item nmsItem = nmsStack.getItem();
+
         PlayerUtil.sweep(
                 player,
                 () -> player.getEyeLocation().add(data.posDelta()),
@@ -110,13 +114,18 @@ public class PlayerUtil {
                             .build();
                     final var entityHandle = ((CraftEntity) entity).getHandle();
                     net.minecraft.world.damagesource.DamageSource sourceHandle = ((CraftDamageSource) source).getHandle();
-                    net.minecraft.world.item.ItemStack nmsItemStack = CraftItemStack.asNMSCopy(item);
-                    Item nmsItem = nmsItemStack.getItem();
-                    final double mod = nmsItem
+                    final double enchantmentDamage = EnchantmentHelper.modifyDamage(
+                            level,
+                            nmsStack,
+                            entityHandle,
+                            sourceHandle,
+                            (float) finalDamage
+                    ) - finalDamage;
+                    final double bonus = nmsItem
                             .getAttackDamageBonus(entityHandle, (float) finalDamage, sourceHandle);
 
                     @SuppressWarnings("deprecation") final boolean critical = strengthScale > 0.9 && !player.isClimbing() && player.getFallDistance() > 0 && !player.isOnGround() && !player.isInWater() && !player.isSprinting() && !player.isInsideVehicle() && !player.hasPotionEffect(PotionEffectType.BLINDNESS) && !paperConfig.entities.behavior.disablePlayerCrits;
-                    double finalFinalDamage = finalDamage + bonus;
+                    double finalFinalDamage = finalDamage + bonus + enchantmentDamage;
                     final Location location = player.getLocation();
                     if (critical) {
                         sourceHandle.critical();
@@ -133,7 +142,7 @@ public class PlayerUtil {
                     );
                     boolean doPost = false;
                     if (entity instanceof LivingEntity livingEntity) {
-                        doPost = nmsItemStack.hurtEnemy(
+                        doPost = nmsStack.hurtEnemy(
                                 ((CraftLivingEntity) livingEntity).getHandle(),
                                 playerHandle
                         );
@@ -145,7 +154,7 @@ public class PlayerUtil {
                     }
 
                     if (doPost)
-                        nmsItemStack.postHurtEnemy(
+                        nmsStack.postHurtEnemy(
                                 (net.minecraft.world.entity.LivingEntity) entityHandle,
                                 playerHandle
                         );
@@ -163,7 +172,7 @@ public class PlayerUtil {
                             world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_STRONG, 1, 1);
                         else world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_WEAK, 1, 1);
                     }
-                    if (mod > 0) {
+                    if (enchantmentDamage > 0) {
                         playerHandle.magicCrit(entityHandle);
                     }
                     if (hpBefore != -1) {
