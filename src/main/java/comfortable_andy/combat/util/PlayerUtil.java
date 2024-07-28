@@ -155,10 +155,11 @@ public class PlayerUtil {
                                 ((CraftLivingEntity) livingEntity).getHandle(),
                                 playerHandle
                         );
-                        EnchantmentHelper.doPostAttackEffects(
+                        EnchantmentHelper.doPostAttackEffectsWithItemSource(
                                 level,
                                 entityHandle,
-                                sourceHandle
+                                sourceHandle,
+                                nmsStack
                         );
                     }
 
