@@ -1,12 +1,15 @@
+import io.papermc.paperweight.userdev.ReobfArtifactConfiguration
+
 plugins {
     id 'java'
     id 'io.papermc.paperweight.userdev' version '1.7.1'
     id 'xyz.jpenilla.run-paper' version '2.3.0'
     id 'com.github.johnrengelman.shadow' version '8.1.1'
+    id 'org.ajoberstar.grgit' version '5.2.2'
 }
 
 group = 'comfortable_andy'
-version = '1.0.0'
+version = '1.0.0+' + versionMetadata()
 
 repositories {
     mavenCentral()
@@ -27,8 +30,12 @@ repositories {
 dependencies {
     compileOnly 'org.projectlombok:lombok:1.18.32'
     annotationProcessor 'org.projectlombok:lombok:1.18.32'
-    paperweight.paperDevBundle("1.21-R0.1-SNAPSHOT")
+    paperweight.paperDevBundle('1.21-R0.1-SNAPSHOT')
     implementation 'com.github.AndyNoob:Mapable:v3.6.0'
+}
+
+paperweight {
+    reobfArtifactConfiguration.set(ReobfArtifactConfiguration.getREOBF_PRODUCTION())
 }
 
 def targetJavaVersion = 21
@@ -66,4 +73,17 @@ shadowJar {
 
 runServer {
     jvmArgs("-Xms512m", "-Xmx512m")
+}
+
+@SuppressWarnings('GrMethodMayBeStatic')
+// grgit is an instance variable
+String versionMetadata() {
+    // credit to https://github.com/Insprill/robot-insprill/blob/master/build.gradle.kts
+    final buildId = System.getenv('GITHUB_RUN_NUMBER')
+
+    if (buildId == null) {
+        return 'commit.' + grgit.head().abbreviatedId + (grgit.status().clean ? '' : '-dirty')
+    } else {
+        return 'build.' + buildId
+    }
 }
