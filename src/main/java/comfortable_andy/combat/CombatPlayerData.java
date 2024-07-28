@@ -109,6 +109,10 @@ public class CombatPlayerData {
         );
     }
 
+    public void resetCameraDelta() {
+        this.lastCameraAngles.clear();
+    }
+
     public org.bukkit.util.Vector posDelta() {
         return fromJoml(positionDelta);
     }
@@ -138,5 +142,4 @@ public class CombatPlayerData {
     public void setCooldown(boolean main, long amt) {
         this.attackDelayLeft = main ? this.attackDelayLeft.mapFirst(a -> amt) : this.attackDelayLeft.mapSecond(a -> amt);
     }
-
 }

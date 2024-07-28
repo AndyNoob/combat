@@ -76,6 +76,7 @@ public class PlayerUtil {
             Vector2f delta = data.averageCameraAngleDelta();
             start.mul(new Quaterniond().rotateX(-Math.toRadians(delta.x)).rotateY(Math.toRadians(delta.y)));
         }
+        data.resetCameraDelta();
         PlayerUtil.sweep(
                 player,
                 () -> player.getEyeLocation().add(data.posDelta()),
