@@ -59,15 +59,11 @@ public class PlayerUtil {
         final int ticks = ceil(cd * speedMod);
         final ItemStack item = player.getInventory().getItem(slot);
         final double strengthScale = Mth.clamp((ticks - ticksLeft + 0.5) / ticks, 0, 1);
-        double damage = getDmg(player, slot) * (0.2 + strengthScale * strengthScale * 0.8);
-        final int sharpness = item.getEnchantmentLevel(Enchantment.SHARPNESS);
-        if (sharpness > 0) {
-            damage += (0.5 * sharpness + 0.5) * strengthScale;
-        }
+        final double initialDamage = getDmg(player, slot) * (0.2 + strengthScale * strengthScale * 0.8);
         final AtomicBoolean sentStrongKnockBack = new AtomicBoolean();
         final AtomicBoolean updatedExhaust = new AtomicBoolean();
         final double knockBack = getKnockBack(player, slot) + (strengthScale > 0.9 && player.isSprinting() ? 1 : 0) + item.getEnchantmentLevel(Enchantment.KNOCKBACK);
-        final double finalDamage = damage * damageMod;
+        final double finalDamage = initialDamage * damageMod;
         final World world = player.getWorld();
         final ServerLevel level = ((CraftWorld) world).getHandle();
         final WorldConfiguration paperConfig = level.paperConfig();
