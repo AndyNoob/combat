@@ -125,7 +125,7 @@ public class PlayerUtil {
                             .getAttackDamageBonus(entityHandle, (float) finalDamage, sourceHandle);
 
                     @SuppressWarnings("deprecation") final boolean critical = strengthScale > 0.9 && !player.isClimbing() && player.getFallDistance() > 0 && !player.isOnGround() && !player.isInWater() && !player.isSprinting() && !player.isInsideVehicle() && !player.hasPotionEffect(PotionEffectType.BLINDNESS) && !paperConfig.entities.behavior.disablePlayerCrits;
-                    double finalFinalDamage = finalDamage + bonus + enchantmentDamage;
+                    double finalFinalDamage = finalDamage + bonus + enchantmentDamage * strengthScale;
                     final Location location = player.getLocation();
                     if (critical) {
                         sourceHandle.critical();
