@@ -51,6 +51,7 @@ public class CombatPlayerData {
     private World lastWorld = null;
     private Vector3d positionDelta = new Vector3d();
     private Pair<Long, Long> attackDelayLeft = new Pair<>(0L, 0L);
+    private Pair<Long, Long> noAttackDelayLeft = new Pair<>(0L, 0L);
 
     public CombatPlayerData(Player player) {
         this.player = player;
@@ -62,6 +63,7 @@ public class CombatPlayerData {
         if (location.getWorld() == null) return;
         this.enterCamera(new Vector2f(location.getPitch(), location.getYaw()));
         this.attackDelayLeft = this.attackDelayLeft.mapFirst(a -> Math.max(0, a - 1)).mapSecond(a -> Math.max(0, a - 1));
+        this.noAttackDelayLeft = this.noAttackDelayLeft.mapFirst(a -> Math.max(0, a - 1)).mapSecond(a -> Math.max(0, a - 1));
         final ServerPlayer handle = ((CraftPlayer) player).getHandle();
         final var connection = handle.connection;
         try {
@@ -85,6 +87,7 @@ public class CombatPlayerData {
             this.player.sendActionBar("cam delta: " + averageCameraAngleDelta().toString(FORMAT) +
                     " pos delta: " + fromBukkit(posDelta()).toString(FORMAT) +
                     " cd cd: " + attackDelayLeft.toString() +
+                    " no cd: " + noAttackDelayLeft.toString() +
                     " blacklist: " + CombatMain.getInstance().interactBlacklist.contains(player)
             );
         }
@@ -142,4 +145,13 @@ public class CombatPlayerData {
     public void setCooldown(boolean main, long amt) {
         this.attackDelayLeft = main ? this.attackDelayLeft.mapFirst(a -> amt) : this.attackDelayLeft.mapSecond(a -> amt);
     }
+
+    public long getNoAttack(boolean main) {
+        return (main ? this.noAttackDelayLeft.getFirst() : this.noAttackDelayLeft.getSecond());
+    }
+
+    public void setNoAttack(boolean main, long amt) {
+        this.noAttackDelayLeft = main ? this.noAttackDelayLeft.mapFirst(a -> amt) : this.noAttackDelayLeft.mapSecond(a -> amt);
+    }
+
 }

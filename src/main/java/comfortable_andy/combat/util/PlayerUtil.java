@@ -81,6 +81,9 @@ public class PlayerUtil {
         final var nmsStack = CraftItemStack.asNMSCopy(item);
         final Item nmsItem = nmsStack.getItem();
 
+        final int ticksPerStep = steps <= 1 ? 1 : ceil(ticks / (steps + 0d));
+        data.setNoAttack(isAttack, steps <= 1 ? 0 : ticks);
+
         PlayerUtil.sweep(
                 player,
                 () -> player.getEyeLocation().add(data.posDelta()),
@@ -89,7 +92,7 @@ public class PlayerUtil {
                 start,
                 attack,
                 steps,
-                steps <= 1 ? 1 : ceil(ticks / (steps + 0d)),
+                ticksPerStep,
                 (entity, mtv) -> {
                     if (entity == player) return;
                     if (entity instanceof Player pl && pl.getGameMode().isInvulnerable()) return;
