@@ -88,6 +88,7 @@ public class PlayerUtil {
                 steps <= 1 ? 1 : ceil(ticks / (steps + 0d)),
                 (entity, mtv) -> {
                     if (entity == player) return;
+                    if (entity instanceof Player pl && pl.getGameMode().isInvulnerable()) return;
                     if (!player.hasLineOfSight(entity)) return;
                     if (knockBack > 0 && entity instanceof LivingEntity e) {
                         playerHandle.setDeltaMovement(playerHandle.getDeltaMovement().multiply(0.6, 1, 0.6));
