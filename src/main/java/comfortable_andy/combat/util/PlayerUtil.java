@@ -95,6 +95,8 @@ public class PlayerUtil {
                 ticksPerStep,
                 (entity, mtv) -> {
                     if (entity == player) return;
+                    final var entityHandle = ((CraftEntity) entity).getHandle();
+                    if (!entityHandle.isAttackable() || entityHandle.skipAttackInteraction(playerHandle)) return;
                     if (entity instanceof Player pl && pl.getGameMode().isInvulnerable()) return;
                     if (!player.hasLineOfSight(entity)) return;
                     if (knockBack > 0 && entity instanceof LivingEntity e) {
@@ -115,7 +117,6 @@ public class PlayerUtil {
                             .withCausingEntity(player)
                             .withDirectEntity(player)
                             .build();
-                    final var entityHandle = ((CraftEntity) entity).getHandle();
                     net.minecraft.world.damagesource.DamageSource sourceHandle = ((CraftDamageSource) source).getHandle();
                     final double enchantmentDamage = EnchantmentHelper.modifyDamage(
                             level,
