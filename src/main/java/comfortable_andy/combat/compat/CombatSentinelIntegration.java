@@ -80,32 +80,35 @@ public class CombatSentinelIntegration extends SentinelIntegration {
         CombatPlayerData combatData = CombatMain.getInstance().getData(player);
         combatData.getOptions().compensateCameraMovement(false);
         st.faceLocation(ent.getEyeLocation());
+        st.attackHelper.rechase();
         if (player.getEyeLocation()
                 .distanceSquared(ent.getEyeLocation()) > st.reach * st.reach) {
-            st.attackHelper.rechase();
             return true;
-        } else if (st.timeSinceAttack < st.attackRate) {
+        } else if (combatData.getNoAttack(true) > 0) {
             return true;
         }
         if (ThreadLocalRandom.current().nextDouble() > direction) {
             final Vector2f entering;
-            if (Math.abs(leftness) > 0.25) {
+            if (Math.abs(leftness) > 0.75) {
                 // do sweep
-                entering = new Vector2f(0, (float) (180 * CombatPlayerData.CACHE_COUNT * -Math.copySign(1, leftness)));
+                entering = new Vector2f(0, (float) (90 * -Math.copySign(1, leftness)));
             } else {
                 // do bash
-                entering = new Vector2f(180 * CombatPlayerData.CACHE_COUNT, 0);
+                entering = new Vector2f(90, 0);
             }
             for (int i = 0; i < CombatPlayerData.CACHE_COUNT - 1; i++) {
-                combatData.enterCamera(new Vector2f(entering).negate().mul(CombatPlayerData.CACHE_COUNT - i));
+                combatData.enterCamera(new Vector2f());
             }
             combatData.enterCamera(new Vector2f(entering));
         }
         combatData.overridePosAndCamera(player.getLocation());
         if (CombatMain.getInstance()
-                .runAction(player, IAction.ActionType.ATTACK, false))
+                .runAction(player, IAction.ActionType.ATTACK, false)) {
             st.timeSinceAttack = 0;
-        else st.attackHelper.rechase();
+            int deduction = ThreadLocalRandom.current().nextInt(0, (int) Math.max(0, -(Math.log10(average.lengthSquared()))));
+            System.out.println(deduction);
+            combatData.setNoAttack(true, Math.round(combatData.getNoAttack(true) + deduction));
+        }
         return true;
     }
 
