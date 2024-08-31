@@ -81,7 +81,11 @@ shadowJar {
 }
 
 runServer {
-    jvmArgs('-Xms1G', '-Xmx1G', '-XX:+AllowEnhancedClassRedefinition', '-javaagent:lib/hotswap/hotswap-agent.jar=disablePlugin=Log4J2')
+    downloadPlugins {
+        url('https://ci.citizensnpcs.co/job/Citizens2/3537/artifact/dist/target/Citizens-2.0.35-b3537.jar')
+        url('https://ci.citizensnpcs.co/job/Sentinel/524/artifact/target/Sentinel-2.9.1-SNAPSHOT-b524.jar')
+    }
+    jvmArgs('-Xms1G', '-Xmx1G', '-XX:+AllowEnhancedClassRedefinition'/*, '-javaagent:lib/hotswap/hotswap-agent.jar=disablePlugin=Log4J2'*/)
 }
 
 @SuppressWarnings('GrMethodMayBeStatic')
