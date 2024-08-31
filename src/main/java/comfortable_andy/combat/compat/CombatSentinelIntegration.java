@@ -4,6 +4,7 @@ import comfortable_andy.combat.CombatMain;
 import comfortable_andy.combat.CombatPlayerData;
 import comfortable_andy.combat.actions.IAction;
 import comfortable_andy.combat.util.VecUtil;
+import io.papermc.paper.entity.LookAnchor;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Getter;
@@ -77,8 +78,13 @@ public class CombatSentinelIntegration extends SentinelIntegration {
         final double direction = attackedToNpc.dot(normalizedAverage);
         final double leftness = left.dot(normalizedAverage);
         CombatPlayerData combatData = CombatMain.getInstance().getData(player);
-        st.attackHelper.rechase();
-        if (player.getEyeLocation().distanceSquared(ent.getEyeLocation()) > st.reach * st.reach) {
+        combatData.getOptions().compensateCameraMovement(false);
+        st.faceLocation(ent.getEyeLocation());
+        if (player.getEyeLocation()
+                .distanceSquared(ent.getEyeLocation()) > st.reach * st.reach) {
+            st.attackHelper.rechase();
+            return true;
+        } else if (st.timeSinceAttack < st.attackRate) {
             return true;
         }
         if (ThreadLocalRandom.current().nextDouble() > direction) {
@@ -95,16 +101,11 @@ public class CombatSentinelIntegration extends SentinelIntegration {
             }
             combatData.enterCamera(new Vector2f(entering));
         }
-        ent.sendActionBar(Component.text(
-                        str(average.toVector3d()) +
-                                ", dot " + VecUtil.FORMAT.format(direction) +
-                                ", dot left " + VecUtil.FORMAT.format(leftness)
-                )
-        );
-        st.faceLocation(ent.getEyeLocation());
+        combatData.overridePosAndCamera(player.getLocation());
         if (CombatMain.getInstance()
                 .runAction(player, IAction.ActionType.ATTACK, false))
             st.timeSinceAttack = 0;
+        else st.attackHelper.rechase();
         return true;
     }
 
