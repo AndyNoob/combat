@@ -14,12 +14,15 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.joml.Vector2f;
 import org.mcmonkey.sentinel.SentinelIntegration;
 import org.mcmonkey.sentinel.SentinelTrait;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 import static comfortable_andy.combat.util.VecUtil.bukkitAverage;
@@ -38,9 +41,11 @@ public class CombatSentinelIntegration extends SentinelIntegration {
                     Map.Entry<SentinelTrait, TrackingData> entry = iterator.next();
                     SentinelTrait trait = entry.getKey();
                     NPC npc = trait.getNPC();
-                    if (trait.chasing == null
-                            || trait.chasing.isDead()
-                            || npc == null
+                    if (trait.chasing == null) {
+                        iterator.remove();
+                        continue;
+                    }
+                    if (npc == null
                             || !npc.isSpawned()
                             || !npc.hasTrait(trait.getClass())
                     ) {
@@ -49,6 +54,10 @@ public class CombatSentinelIntegration extends SentinelIntegration {
                     }
                     TrackingData data = entry.getValue();
                     data.enterLocation(trait.chasing.getLocation());
+                    Entity entity = trait.getNPC().getEntity();
+                    if (entity == null) continue;
+                    entity.customName(Component.text("chasing " + trait.chasing.getName()));
+                    entity.setCustomNameVisible(true);
                 }
             }
         }.runTaskTimer(CombatMain.getInstance(), 0, 1);
@@ -64,17 +73,45 @@ public class CombatSentinelIntegration extends SentinelIntegration {
         );
         final var average = data.getMovementAverage();
         final var attackedToNpc = attacker.getLocation().subtract(ent.getLocation()).toVector().normalize();
-        ent.sendActionBar(Component.text(str(average.toVector3d()) + ", dot " + attackedToNpc.dot(average.normalize())));
-        return true;
+        final var left = attackedToNpc.clone().rotateAroundY(Math.toRadians(90)).setY(0).normalize();
+        final var normalizedAverage = average.clone().normalize();
+        final double direction = attackedToNpc.dot(normalizedAverage);
+        final double leftness = left.dot(normalizedAverage);
+        CombatPlayerData combatData = data.getCombatData();
+        for (int i = 0; i < 20; i++) {
+            combatData.enterCamera(new Vector2f());
+        }
+        if (direction <= 0) return false;
+        st.attackHelper.rechase();
+        if (ThreadLocalRandom.current().nextDouble() < direction) {
+            if (Math.abs(leftness) > 0.4) {
+                // do sweep
+                combatData.enterCamera(new Vector2f(0, (float) (180 * -Math.copySign(1, leftness))));
+            } else {
+                combatData.enterCamera(new Vector2f(180, 0));
+                // do bash
+            }
+        }
+        ent.sendActionBar(Component.text(
+                        str(average.toVector3d()) +
+                                ", dot " + VecUtil.FORMAT.format(direction) +
+                                ", dot left " + VecUtil.FORMAT.format(leftness) +
+                                " cam delta " + str(combatData.averageCameraAngleDelta())
+                )
+        );
+        return false;
     }
 
     @Data
     public static class TrackingData {
+
+        private static final int CACHE_SIZE = 10;
+
         private final CombatPlayerData combatData;
-        private final Vector<Location> lastLocations = new Vector<>(20);
+        private final Vector<Location> lastLocations = new Vector<>(CACHE_SIZE);
         private Class<? extends IAction> lastAction;
-        private final Vector<org.bukkit.util.Vector> lastMovementAverages = new Vector<>(20);
-        private final Vector<org.bukkit.util.Vector> lastMovementAverageAverages = new Vector<>(20);
+        private final Vector<org.bukkit.util.Vector> lastMovementAverages = new Vector<>(CACHE_SIZE);
+        private final Vector<org.bukkit.util.Vector> lastMovementAverageAverages = new Vector<>(CACHE_SIZE);
         private org.bukkit.util.Vector movementAverage = new org.bukkit.util.Vector();
         private org.bukkit.util.Vector movementAverageAverage = new org.bukkit.util.Vector();
 
@@ -85,9 +122,10 @@ public class CombatSentinelIntegration extends SentinelIntegration {
         public void enterLocation(Location location) {
             if (location == null) return;
             lastLocations.add(0, location);
-            lastLocations.setSize(20);
+            lastLocations.setSize(CACHE_SIZE);
             final var movementAverage = bukkitAverage(
                     lastLocations.stream()
+                            .filter(Objects::nonNull)
                             .map(Location::toVector)
                             .collect(Collectors.toList())
             );
@@ -97,14 +135,14 @@ public class CombatSentinelIntegration extends SentinelIntegration {
         public void setMovementAverage(org.bukkit.util.Vector movementAverage) {
             this.movementAverage = movementAverage;
             lastMovementAverages.add(0, movementAverage);
-            lastMovementAverages.setSize(20);
+            lastMovementAverages.setSize(CACHE_SIZE);
             setMovementAverageAverage(bukkitAverage(lastMovementAverages));
         }
 
         public void setMovementAverageAverage(org.bukkit.util.Vector movementAverageAverage) {
             this.movementAverageAverage = movementAverageAverage;
             lastMovementAverageAverages.add(0, movementAverageAverage);
-            lastMovementAverageAverages.setSize(20);
+            lastMovementAverageAverages.setSize(CACHE_SIZE);
         }
     }
 
