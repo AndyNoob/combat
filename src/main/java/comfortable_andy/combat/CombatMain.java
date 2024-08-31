@@ -221,7 +221,7 @@ public final class CombatMain extends JavaPlugin implements Listener {
         if (cancel && event.getAction() != Action.LEFT_CLICK_BLOCK) event.setCancelled(true);
     }
 
-    private boolean runAction(Player player, IAction.ActionType actionType, boolean clickedBlock) {
+    public boolean runAction(Player player, IAction.ActionType actionType, boolean clickedBlock) {
         if (player.getGameMode() == GameMode.SPECTATOR) return false;
         final CombatPlayerData data = getData(player);
         final boolean isConventional = actionType != IAction.ActionType.DOUBLE_SNEAK;

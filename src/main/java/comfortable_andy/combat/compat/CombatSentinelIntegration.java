@@ -55,9 +55,8 @@ public class CombatSentinelIntegration extends SentinelIntegration {
                     TrackingData data = entry.getValue();
                     data.enterLocation(trait.chasing.getLocation());
                     Entity entity = trait.getNPC().getEntity();
-                    if (entity == null) continue;
-                    entity.customName(Component.text("chasing " + trait.chasing.getName()));
-                    entity.setCustomNameVisible(true);
+                    if (entity instanceof Player player)
+                        CombatMain.getInstance().getData(player).updateDelays();
                 }
             }
         }.runTaskTimer(CombatMain.getInstance(), 0, 1);
@@ -69,7 +68,7 @@ public class CombatSentinelIntegration extends SentinelIntegration {
         if (!(attacker instanceof Player player)) return false;
         TrackingData data = ticking.computeIfAbsent(
                 st,
-                (k) -> new TrackingData(CombatMain.getInstance().getData(player))
+                (k) -> new TrackingData()
         );
         final var average = data.getMovementAverage();
         final var attackedToNpc = attacker.getLocation().subtract(ent.getLocation()).toVector().normalize();
@@ -77,23 +76,24 @@ public class CombatSentinelIntegration extends SentinelIntegration {
         final var normalizedAverage = average.clone().normalize();
         final double direction = attackedToNpc.dot(normalizedAverage);
         final double leftness = left.dot(normalizedAverage);
-        CombatPlayerData combatData = data.getCombatData();
-        if (direction <= 0) return false;
+        CombatPlayerData combatData = CombatMain.getInstance().getData(player);
         st.attackHelper.rechase();
+        if (player.getEyeLocation().distanceSquared(ent.getEyeLocation()) > st.reach * st.reach) {
+            return true;
+        }
         if (ThreadLocalRandom.current().nextDouble() > direction) {
             final Vector2f entering;
             if (Math.abs(leftness) > 0.25) {
                 // do sweep
-                entering = (new Vector2f(0, (float) (180 * -Math.copySign(1, leftness))));
-                System.out.println("sweep");
+                entering = new Vector2f(0, (float) (180 * CombatPlayerData.CACHE_COUNT * -Math.copySign(1, leftness)));
             } else {
                 // do bash
-                entering = (new Vector2f(180, 0));
-                System.out.println("bash");
+                entering = new Vector2f(180 * CombatPlayerData.CACHE_COUNT, 0);
             }
-            for (int i = 0; i < 20; i++) {
-                combatData.enterCamera(new Vector2f(entering));
+            for (int i = 0; i < CombatPlayerData.CACHE_COUNT - 1; i++) {
+                combatData.enterCamera(new Vector2f(entering).negate().mul(CombatPlayerData.CACHE_COUNT - i));
             }
+            combatData.enterCamera(new Vector2f(entering));
         }
         ent.sendActionBar(Component.text(
                         str(average.toVector3d()) +
@@ -101,7 +101,11 @@ public class CombatSentinelIntegration extends SentinelIntegration {
                                 ", dot left " + VecUtil.FORMAT.format(leftness)
                 )
         );
-        return false;
+        st.faceLocation(ent.getEyeLocation());
+        if (CombatMain.getInstance()
+                .runAction(player, IAction.ActionType.ATTACK, false))
+            st.timeSinceAttack = 0;
+        return true;
     }
 
     @Data
@@ -109,7 +113,6 @@ public class CombatSentinelIntegration extends SentinelIntegration {
 
         private static final int CACHE_SIZE = 10;
 
-        private final CombatPlayerData combatData;
         private final Vector<Location> lastLocations = new Vector<>(CACHE_SIZE);
         private Class<? extends IAction> lastAction;
         private final Vector<org.bukkit.util.Vector> lastMovementAverages = new Vector<>(CACHE_SIZE);

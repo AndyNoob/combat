@@ -67,8 +67,7 @@ public class CombatPlayerData {
         this.cameraOverride = null;
         this.positionOverride = null;
         this.enterCamera(new Vector2f(location.getPitch(), location.getYaw()));
-        this.attackDelayLeft = this.attackDelayLeft.mapFirst(a -> Math.max(0, a - 1)).mapSecond(a -> Math.max(0, a - 1));
-        this.noAttackDelayLeft = this.noAttackDelayLeft.mapFirst(a -> Math.max(0, a - 1)).mapSecond(a -> Math.max(0, a - 1));
+        updateDelays();
         final ServerPlayer handle = ((CraftPlayer) player).getHandle();
         final var connection = handle.connection;
         try {
@@ -112,6 +111,11 @@ public class CombatPlayerData {
             ));
         }
         this.lastWorld = location.getWorld();
+    }
+
+    public void updateDelays() {
+        this.attackDelayLeft = this.attackDelayLeft.mapFirst(a -> Math.max(0, a - 1)).mapSecond(a -> Math.max(0, a - 1));
+        this.noAttackDelayLeft = this.noAttackDelayLeft.mapFirst(a -> Math.max(0, a - 1)).mapSecond(a -> Math.max(0, a - 1));
     }
 
     /**
