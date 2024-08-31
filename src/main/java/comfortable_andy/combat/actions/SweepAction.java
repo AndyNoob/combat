@@ -21,7 +21,7 @@ public class SweepAction extends SweepingAction {
     private double windBackRotY = 15;
     private double attackRotY = 30;
 
-    boolean triggered(Vector2f delta) {
+    public boolean triggered(Vector2f delta) {
         return Math.abs(delta.y) > triggerAmount;
     }
 

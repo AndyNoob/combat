@@ -18,7 +18,7 @@ public class BashAction extends SweepingAction {
     private double windBackRotX = 15;
     private double attackRotX = 30;
 
-    boolean triggered(Vector2f delta) {
+    public boolean triggered(Vector2f delta) {
         return (delta.x > triggerAmount);
     }
 

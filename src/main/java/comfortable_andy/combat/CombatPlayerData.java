@@ -2,6 +2,10 @@ package comfortable_andy.combat;
 
 import com.mojang.datafixers.util.Pair;
 import lombok.Getter;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.title.Title;
+import net.kyori.adventure.title.TitlePart;
+import net.kyori.adventure.util.Ticks;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import org.bukkit.Location;
@@ -83,13 +87,28 @@ public class CombatPlayerData {
             throw new RuntimeException(e);
         }
 
+        Vector2f delta = averageCameraAngleDelta();
         if (CombatMain.getInstance().isShowActionBarDebug()) {
-            this.player.sendActionBar("cam delta: " + averageCameraAngleDelta().toString(FORMAT) +
+            this.player.sendActionBar("cam delta: " + delta.toString(FORMAT) +
                     " pos delta: " + fromBukkit(posDelta()).toString(FORMAT) +
                     " cd cd: " + attackDelayLeft.toString() +
                     " no cd: " + noAttackDelayLeft.toString() +
                     " blacklist: " + CombatMain.getInstance().interactBlacklist.contains(player)
             );
+        }
+        if (CombatMain.getInstance().isShowCameraDir()) {
+            String arrow = "";
+            if (CombatMain.getInstance().getSweep().triggered(delta))
+                arrow = delta.y > 0 ? "→" : "←";
+            else if (CombatMain.getInstance().getBash().triggered(delta))
+                arrow = "↓";
+            player.sendTitlePart(TitlePart.TITLE, Component.empty());
+            player.sendTitlePart(TitlePart.SUBTITLE, Component.text(arrow));
+            player.sendTitlePart(TitlePart.TIMES, Title.Times.times(
+                    Ticks.duration(0),
+                    Ticks.duration(10),
+                    Ticks.duration(0)
+            ));
         }
         this.lastWorld = location.getWorld();
     }

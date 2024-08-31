@@ -60,6 +60,12 @@ public final class CombatMain extends JavaPlugin implements Listener {
     private boolean enabled;
     @Getter
     private boolean showActionBarDebug = false;
+    @Getter
+    private boolean showCameraDir = false;
+    @Getter
+    private SweepAction sweep;
+    @Getter
+    private BashAction bash;
 
     @SuppressWarnings("UnstableApiUsage")
     @Override
@@ -102,17 +108,25 @@ public final class CombatMain extends JavaPlugin implements Listener {
                             .hasPermission("combat.command.enable"))
                     .then(enableArg)
                     .executes(enableExecutor);
+            final var show = Commands
+                    .literal("show")
+                    .then(Commands.literal("debug_msg").executes(s -> {
+                        showActionBarDebug = !showActionBarDebug;
+                        s.getSource().getSender().sendMessage("Debug Msg: " + showActionBarDebug);
+                        return Command.SINGLE_SUCCESS;
+                    }))
+                    .then(Commands.literal("camera_dir").executes(s -> {
+                        showCameraDir = !showCameraDir;
+                        s.getSource().getSender().sendMessage("Show Camera Dir: " + showCameraDir);
+                        return Command.SINGLE_SUCCESS;
+                    }));
             commands.register(
                     Commands.literal("combat")
                             .requires(s -> s.getSender()
                                     .hasPermission("combat.command.use"))
                             .then(reload)
                             .then(enable)
-                            .then(Commands.literal("debug_msg").executes(s -> {
-                                showActionBarDebug = !showActionBarDebug;
-                                s.getSource().getSender().sendMessage("Debug Msg: " + showActionBarDebug);
-                                return Command.SINGLE_SUCCESS;
-                            }))
+                            .then(show)
                             .build(),
                     "Combat plugin command.",
                     List.of("cb")
@@ -124,6 +138,7 @@ public final class CombatMain extends JavaPlugin implements Listener {
         saveDefaultConfig();
         reloadConfig();
         enabled = getConfig().getBoolean("enabled");
+        showCameraDir = getConfig().getBoolean("camera-direction-title");
     }
 
     public static CombatMain getInstance() {
@@ -260,8 +275,8 @@ public final class CombatMain extends JavaPlugin implements Listener {
         final File bashFile = new File(getDataFolder(), "actions/bash.yml");
         saveResource(dataPath.relativize(sweepFile.toPath()).toString(), false);
         saveResource(dataPath.relativize(bashFile.toPath()).toString(), false);
-        SweepAction sweep = loadAction(sweepFile, SweepAction.class);
-        BashAction bash = loadAction(bashFile, BashAction.class);
+        sweep = loadAction(sweepFile, SweepAction.class);
+        bash = loadAction(bashFile, BashAction.class);
         actions.addAll(Arrays.asList(
                 sweep,
                 bash,
