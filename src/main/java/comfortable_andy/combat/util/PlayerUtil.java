@@ -104,7 +104,7 @@ public class PlayerUtil {
                 player,
                 () -> fromJoml(data.latestPos().add(0, player.getEyeHeight(), 0)).toLocation(player.getWorld()).add(data.posDelta()),
                 PlayerUtil.getReach(player),
-                1,
+                (float) strengthScale,
                 start,
                 attack,
                 steps,
