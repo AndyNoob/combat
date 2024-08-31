@@ -78,25 +78,27 @@ public class CombatSentinelIntegration extends SentinelIntegration {
         final double direction = attackedToNpc.dot(normalizedAverage);
         final double leftness = left.dot(normalizedAverage);
         CombatPlayerData combatData = data.getCombatData();
-        for (int i = 0; i < 20; i++) {
-            combatData.enterCamera(new Vector2f());
-        }
         if (direction <= 0) return false;
         st.attackHelper.rechase();
-        if (ThreadLocalRandom.current().nextDouble() < direction) {
-            if (Math.abs(leftness) > 0.4) {
+        if (ThreadLocalRandom.current().nextDouble() > direction) {
+            final Vector2f entering;
+            if (Math.abs(leftness) > 0.25) {
                 // do sweep
-                combatData.enterCamera(new Vector2f(0, (float) (180 * -Math.copySign(1, leftness))));
+                entering = (new Vector2f(0, (float) (180 * -Math.copySign(1, leftness))));
+                System.out.println("sweep");
             } else {
-                combatData.enterCamera(new Vector2f(180, 0));
                 // do bash
+                entering = (new Vector2f(180, 0));
+                System.out.println("bash");
+            }
+            for (int i = 0; i < 20; i++) {
+                combatData.enterCamera(new Vector2f(entering));
             }
         }
         ent.sendActionBar(Component.text(
                         str(average.toVector3d()) +
                                 ", dot " + VecUtil.FORMAT.format(direction) +
-                                ", dot left " + VecUtil.FORMAT.format(leftness) +
-                                " cam delta " + str(combatData.averageCameraAngleDelta())
+                                ", dot left " + VecUtil.FORMAT.format(leftness)
                 )
         );
         return false;
