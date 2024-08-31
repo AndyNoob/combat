@@ -76,20 +76,30 @@ public class CombatSentinelIntegration extends SentinelIntegration {
         CombatPlayerData combatData = CombatMain.getInstance().getData(player);
         combatData.getOptions().compensateCameraMovement(false);
         st.faceLocation(ent.getEyeLocation());
-        st.getNPC().getNavigator().cancelNavigation();
         st.attackHelper.rechase();
         if (player.getEyeLocation()
                 .distanceSquared(ent.getEyeLocation()) > st.reach * st.reach) {
+            if (!st.rangedChase) {
+                st.getNPC().getNavigator().cancelNavigation();
+            }
             // allow long range
             return false;
         } else if (combatData.getNoAttack(true) > 0) {
             return true;
         }
+
+        final double sign = Math.copySign(1, leftness);
+
+        if (ThreadLocalRandom.current().nextBoolean()) {
+            // strife
+            st.pathTo(player.getLocation().add(left.clone().multiply(-sign).multiply(3.5)));
+        }
+
         if (ThreadLocalRandom.current().nextDouble() > direction) {
-            final Vector2f entering;
+            Vector2f entering;
             if (Math.abs(leftness) > 0.75) {
                 // do sweep
-                entering = new Vector2f(0, (float) (90 * -Math.copySign(1, leftness)));
+                entering = new Vector2f(0, (float) (90 * -sign));
             } else {
                 // do bash
                 entering = new Vector2f(90, 0);
@@ -105,7 +115,7 @@ public class CombatSentinelIntegration extends SentinelIntegration {
             st.timeSinceAttack = 0;
             double len = average.lengthSquared();
             final double itemCd = PlayerUtil.getCd(player, EquipmentSlot.HAND);
-            double scaleFactor = Math.max(0.7, 2 + Math.log10(Math.atan(len)));
+            double scaleFactor = Math.max(0.85, 2 + Math.log10(Math.atan(len)));
             int deduction = len == 0 ? 0 : (int) Math.round(scaleFactor * itemCd);
             st.getNPC().getNavigator().setTarget(ent, true);
             combatData.setNoAttack(true, Math.round(combatData.getNoAttack(true) + deduction));
