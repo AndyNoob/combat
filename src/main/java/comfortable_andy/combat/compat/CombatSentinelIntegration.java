@@ -3,17 +3,14 @@ package comfortable_andy.combat.compat;
 import comfortable_andy.combat.CombatMain;
 import comfortable_andy.combat.CombatPlayerData;
 import comfortable_andy.combat.actions.IAction;
-import comfortable_andy.combat.util.VecUtil;
-import io.papermc.paper.entity.LookAnchor;
-import lombok.AccessLevel;
+import comfortable_andy.combat.util.PlayerUtil;
 import lombok.Data;
-import lombok.Getter;
 import net.citizensnpcs.api.npc.NPC;
-import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.joml.Vector2f;
 import org.mcmonkey.sentinel.SentinelIntegration;
@@ -27,7 +24,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 import static comfortable_andy.combat.util.VecUtil.bukkitAverage;
-import static comfortable_andy.combat.util.VecUtil.str;
 
 public class CombatSentinelIntegration extends SentinelIntegration {
 
@@ -108,7 +104,9 @@ public class CombatSentinelIntegration extends SentinelIntegration {
                 .runAction(player, IAction.ActionType.ATTACK, false)) {
             st.timeSinceAttack = 0;
             double len = average.lengthSquared();
-            int deduction = len == 0 ? 0 : (int) Math.round(-((Math.log10(len)) / Math.log10(2)));
+            final double itemCd = PlayerUtil.getCd(player, EquipmentSlot.HAND);
+            double scaleFactor = Math.max(0.7, 2 + Math.log10(Math.atan(len)));
+            int deduction = len == 0 ? 0 : (int) Math.round(scaleFactor * itemCd);
             st.getNPC().getNavigator().setTarget(ent, true);
             combatData.setNoAttack(true, Math.round(combatData.getNoAttack(true) + deduction));
         }
