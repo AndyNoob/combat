@@ -80,10 +80,12 @@ public class CombatSentinelIntegration extends SentinelIntegration {
         CombatPlayerData combatData = CombatMain.getInstance().getData(player);
         combatData.getOptions().compensateCameraMovement(false);
         st.faceLocation(ent.getEyeLocation());
+        st.getNPC().getNavigator().cancelNavigation();
         st.attackHelper.rechase();
         if (player.getEyeLocation()
                 .distanceSquared(ent.getEyeLocation()) > st.reach * st.reach) {
-            return true;
+            // allow long range
+            return false;
         } else if (combatData.getNoAttack(true) > 0) {
             return true;
         }
@@ -105,8 +107,9 @@ public class CombatSentinelIntegration extends SentinelIntegration {
         if (CombatMain.getInstance()
                 .runAction(player, IAction.ActionType.ATTACK, false)) {
             st.timeSinceAttack = 0;
-            int deduction = ThreadLocalRandom.current().nextInt(0, (int) Math.max(0, -(Math.log10(average.lengthSquared()))));
-            System.out.println(deduction);
+            double len = average.lengthSquared();
+            int deduction = len == 0 ? 0 : (int) Math.round(-((Math.log10(len)) / Math.log10(2)));
+            st.getNPC().getNavigator().setTarget(ent, true);
             combatData.setNoAttack(true, Math.round(combatData.getNoAttack(true) + deduction));
         }
         return true;
