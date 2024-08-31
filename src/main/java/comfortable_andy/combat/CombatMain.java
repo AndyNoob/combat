@@ -4,10 +4,7 @@ import com.destroystokyo.paper.MaterialTags;
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.BoolArgumentType;
-import comfortable_andy.combat.actions.BashAction;
-import comfortable_andy.combat.actions.IAction;
-import comfortable_andy.combat.actions.StabAction;
-import comfortable_andy.combat.actions.SweepAction;
+import comfortable_andy.combat.actions.*;
 import comfortable_andy.combat.handler.OrientedBoxHandler;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
@@ -70,6 +67,7 @@ public final class CombatMain extends JavaPlugin implements Listener {
     private SweepAction sweep;
     @Getter
     private BashAction bash;
+    private ShieldBashAction shieldBash;
 
     @SuppressWarnings("UnstableApiUsage")
     @Override
@@ -282,11 +280,15 @@ public final class CombatMain extends JavaPlugin implements Listener {
         final Path dataPath = getDataFolder().toPath();
         final File sweepFile = new File(getDataFolder(), "actions/sweep.yml");
         final File bashFile = new File(getDataFolder(), "actions/bash.yml");
+        final File shieldBashFile = new File(getDataFolder(), "actions/shield_bash.yml");
         saveResource(dataPath.relativize(sweepFile.toPath()).toString(), false);
         saveResource(dataPath.relativize(bashFile.toPath()).toString(), false);
+        saveResource(dataPath.relativize(shieldBashFile.toPath()).toString(), false);
         sweep = loadAction(sweepFile, SweepAction.class);
         bash = loadAction(bashFile, BashAction.class);
+        shieldBash = loadAction(shieldBashFile, ShieldBashAction.class);
         actions.addAll(Arrays.asList(
+                shieldBash,
                 sweep,
                 bash,
                 new StabAction()

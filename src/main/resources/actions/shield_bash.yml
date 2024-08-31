@@ -1,0 +1,7 @@
+enabled: true
+reach: 2
+ticks: 2
+canParry: true
+knockBackAmount: 0.7
+extraDamage: 2.5
+durabilityCost: 2

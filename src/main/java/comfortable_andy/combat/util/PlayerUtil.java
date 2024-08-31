@@ -109,25 +109,22 @@ public class PlayerUtil {
                 attack,
                 steps,
                 ticksPerStep,
-                (entity, mtv) -> {
-                    if (entity == player) return;
-                    final var entityHandle = ((CraftEntity) entity).getHandle();
-                    if (!entityHandle.isAttackable() || entityHandle.skipAttackInteraction(playerHandle)) return;
-                    if (entity instanceof Player pl && pl.getGameMode().isInvulnerable()) return;
-                    if (!player.hasLineOfSight(entity)) return;
-                    if (Tag.ENTITY_TYPES_REDIRECTABLE_PROJECTILE.isTagged(entity.getType())) {
+                (e, mtv) -> {
+                    if (!canAttack(player, e)) return;
+                    final var entityHandle = ((CraftEntity) e).getHandle();
+                    if (Tag.ENTITY_TYPES_REDIRECTABLE_PROJECTILE.isTagged(e.getType())) {
                         // TODO decide if this should call non living damage event
                         if (((Projectile) entityHandle).deflect(ProjectileDeflection.AIM_DEFLECT, playerHandle, playerHandle, true)) {
                             world.playSound(player.getLocation(), Sound.ENTITY_PLAYER_ATTACK_NODAMAGE, SoundCategory.PLAYERS, 1, 1);
                             return;
                         }
                     }
-                    if (knockBack > 0 && entity instanceof LivingEntity e) {
+                    if (knockBack > 0 && e instanceof LivingEntity living) {
                         playerHandle.setDeltaMovement(playerHandle.getDeltaMovement().multiply(0.6, 1, 0.6));
                         if (!paperConfig.misc.disableSprintInterruptionOnAttack) {
                             player.setSprinting(false);
                         }
-                        ((CraftLivingEntity) e).getHandle().knockback(
+                        ((CraftLivingEntity) living).getHandle().knockback(
                                 knockBack,
                                 -mtv.getX(),
                                 -mtv.getZ(),
@@ -162,13 +159,13 @@ public class PlayerUtil {
                         world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_KNOCKBACK, 1, 1);
                         sentStrongKnockBack.set(true);
                     }
-                    final double hpBefore = entity instanceof LivingEntity le ? le.getHealth() : -1;
+                    final double hpBefore = e instanceof LivingEntity le ? le.getHealth() : -1;
                     final boolean hurt = entityHandle.hurt(
                             sourceHandle,
                             (float) finalFinalDamage
                     );
                     boolean doPost = false;
-                    if (entity instanceof LivingEntity livingEntity) {
+                    if (e instanceof LivingEntity livingEntity) {
                         doPost = nmsStack.hurtEnemy(
                                 ((CraftLivingEntity) livingEntity).getHandle(),
                                 playerHandle
@@ -204,7 +201,7 @@ public class PlayerUtil {
                         playerHandle.magicCrit(entityHandle);
                     }
                     if (hpBefore != -1) {
-                        final double actualDamage = hpBefore - ((LivingEntity) entity).getHealth();
+                        final double actualDamage = hpBefore - ((LivingEntity) e).getHealth();
                         final int addingToStat = (int) Math.round(actualDamage * 10);
                         if (addingToStat > 0) player.incrementStatistic(Statistic.DAMAGE_DEALT, addingToStat);
                         final int hearts = (int) (actualDamage / 2);
@@ -212,7 +209,7 @@ public class PlayerUtil {
                         if (hearts > 0) {
                             world.spawnParticle(
                                     Particle.DAMAGE_INDICATOR,
-                                    entity.getLocation().add(0, entity.getBoundingBox().getHeight() / 2, 0),
+                                    e.getLocation().add(0, e.getBoundingBox().getHeight() / 2, 0),
                                     hearts,
                                     0.1,
                                     0.0,
@@ -356,6 +353,15 @@ public class PlayerUtil {
 
     public static double getKnockBack(Player player, EquipmentSlot slot) {
         return getItemLess(player, Attribute.GENERIC_ATTACK_KNOCKBACK) + ItemUtil.getAttribute(player.getInventory().getItem(slot), EquipmentSlot.HAND, Attribute.GENERIC_ATTACK_KNOCKBACK);
+    }
+
+    public static boolean canAttack(Player attacker, Entity attacked) {
+        ServerPlayer playerHandle = ((CraftPlayer) attacker).getHandle();
+        if (attacked == attacker) return false;
+        final var entityHandle = ((CraftEntity) attacked).getHandle();
+        if (!entityHandle.isAttackable() || entityHandle.skipAttackInteraction(playerHandle)) return false;
+        if (attacked instanceof Player pl && pl.getGameMode().isInvulnerable()) return false;
+        return attacker.hasLineOfSight(attacked);
     }
 
 }
