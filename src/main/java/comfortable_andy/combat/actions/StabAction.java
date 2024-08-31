@@ -14,7 +14,7 @@ public class StabAction implements IAction {
 
     @Override
     public @NotNull ActionResult tryActivate(Player player, CombatPlayerData data, ActionType type) {
-        if (type == ActionType.DOUBLE_SNEAK) return ActionResult.NONE;
+        if (type == ActionType.DOUBLE_SNEAK || true) return ActionResult.NONE;
         boolean isAttack = type == ActionType.ATTACK;
         PlayerUtil.doSweep(
                 player,

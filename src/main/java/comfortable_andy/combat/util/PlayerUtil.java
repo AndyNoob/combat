@@ -88,7 +88,7 @@ public class PlayerUtil {
         final World world = player.getWorld();
         final ServerLevel level = ((CraftWorld) world).getHandle();
         final WorldConfiguration paperConfig = level.paperConfig();
-        if (CombatMain.getInstance().getConfig().getBoolean("compensate-camera-movement", true)) {
+        if (data.getOptions().compensateCameraMovement()) {
             Vector2f delta = data.averageCameraAngleDelta();
             start.mul(new Quaterniond().rotateX(-Math.toRadians(delta.x)).rotateY(Math.toRadians(delta.y)));
         }
@@ -288,9 +288,7 @@ public class PlayerUtil {
                             return true;
                         })
                         .postTickCallback(() -> {
-                            if (CombatMain.getInstance()
-                                    .getConfig().getBoolean("box-display-particle", false))
-                                attackBox.clone().display(world);
+                            attackBox.clone().display(world, p -> CombatMain.getInstance().getData(p).getOptions().boxDisplayParticles());
                             attackBox.rotateBy(step);
                         })
                         .collidesWithOthers(collide)

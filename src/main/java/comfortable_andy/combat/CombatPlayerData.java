@@ -55,9 +55,12 @@ public class CombatPlayerData {
     private Pair<Long, Long> noAttackDelayLeft = new Pair<>(0L, 0L);
     private Vector2f cameraOverride = null;
     private Vector3d positionOverride = null;
+    @Getter
+    private final CombatOptions options;
 
     public CombatPlayerData(Player player) {
         this.player = player;
+        this.options = CombatMain.getInstance().getCombatOptions().clone();
     }
 
     @SuppressWarnings("deprecation")
@@ -96,7 +99,7 @@ public class CombatPlayerData {
                     " blacklist: " + CombatMain.getInstance().interactBlacklist.contains(player)
             );
         }
-        if (CombatMain.getInstance().isShowCameraDir()) {
+        if (options.cameraDirectionTitle()) {
             String arrow = "";
             if (CombatMain.getInstance().getSweep().triggered(delta))
                 arrow = delta.y > 0 ? "→" : "←";

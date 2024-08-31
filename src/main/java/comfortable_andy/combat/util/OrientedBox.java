@@ -3,9 +3,11 @@ package comfortable_andy.combat.util;
 import comfortable_andy.combat.CombatMain;
 import lombok.Getter;
 import org.apache.commons.lang.math.DoubleRange;
+import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.Particle;
 import org.bukkit.World;
+import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
@@ -16,6 +18,8 @@ import org.joml.Vector3d;
 
 import java.text.DecimalFormat;
 import java.util.*;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import static comfortable_andy.combat.util.VecUtil.*;
 
@@ -130,9 +134,10 @@ public class OrientedBox implements Cloneable {
         return options;
     }
 
-    public void display(World world) {
+    public void display(World world, Predicate<Player> shouldDisplayTo) {
         new BukkitRunnable() {
             int count = 0;
+            final Collection<? extends Player> players = Bukkit.getOnlinePlayers().stream().filter(shouldDisplayTo).toList();
 
             @Override
             public void run() {
@@ -144,16 +149,18 @@ public class OrientedBox implements Cloneable {
                     final Vector3d vector = axis.getColumn(i, new Vector3d());
                     final Color col = colors.next();
                     for (int j = 0; j < 5; j++) {
-                        world.spawnParticle(
-                                Particle.DUST,
-                                fromJoml(center.toVector3d().lerp(center.toVector3d().add(vector), j / 5d)).toLocation(world),
-                                1,
-                                0,
-                                0,
-                                0,
-                                0,
-                                new Particle.DustOptions(col, 1)
-                        );
+                        for (Player player : players) {
+                            player.spawnParticle(
+                                    Particle.DUST,
+                                    fromJoml(center.toVector3d().lerp(center.toVector3d().add(vector), j / 5d)).toLocation(world),
+                                    1,
+                                    0,
+                                    0,
+                                    0,
+                                    0,
+                                    new Particle.DustOptions(col, 1)
+                            );
+                        }
                     }
                 }
                 if (count-- <= 0) cancel();

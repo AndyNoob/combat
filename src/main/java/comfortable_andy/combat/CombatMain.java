@@ -62,7 +62,7 @@ public final class CombatMain extends JavaPlugin implements Listener {
     @Getter
     private boolean showActionBarDebug = false;
     @Getter
-    private boolean showCameraDir = false;
+    private CombatOptions combatOptions;
     @Getter
     private SweepAction sweep;
     @Getter
@@ -119,8 +119,8 @@ public final class CombatMain extends JavaPlugin implements Listener {
                         return Command.SINGLE_SUCCESS;
                     }))
                     .then(Commands.literal("camera_dir").executes(s -> {
-                        showCameraDir = !showCameraDir;
-                        s.getSource().getSender().sendMessage("Show Camera Dir: " + showCameraDir);
+                        combatOptions.cameraDirectionTitle(!combatOptions.cameraDirectionTitle());
+                        s.getSource().getSender().sendMessage("Show Camera Dir: " + combatOptions.cameraDirectionTitle());
                         return Command.SINGLE_SUCCESS;
                     }));
             commands.register(
@@ -141,7 +141,7 @@ public final class CombatMain extends JavaPlugin implements Listener {
         saveDefaultConfig();
         reloadConfig();
         enabled = getConfig().getBoolean("enabled");
-        showCameraDir = getConfig().getBoolean("camera-direction-title");
+        combatOptions = new CombatOptions();
     }
 
     public static CombatMain getInstance() {
