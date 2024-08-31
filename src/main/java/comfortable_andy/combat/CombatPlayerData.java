@@ -20,7 +20,6 @@ import java.lang.reflect.Field;
 import java.util.Vector;
 
 import static comfortable_andy.combat.util.VecUtil.*;
-import static net.minecraft.util.Mth.degreesDifference;
 
 public class CombatPlayerData {
 
@@ -48,6 +47,7 @@ public class CombatPlayerData {
     /**
      * 1 for each tick that passed
      */
+    @Getter
     private final Vector<Vector2f> lastCameraAngles = new Vector<>();
     private World lastWorld = null;
     private Vector3d positionDelta = new Vector3d();
