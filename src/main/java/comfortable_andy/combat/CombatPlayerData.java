@@ -17,10 +17,7 @@ import org.joml.Vector3d;
 import org.joml.Vector3f;
 
 import java.lang.reflect.Field;
-import java.util.List;
 import java.util.Vector;
-import java.util.function.BiFunction;
-import java.util.function.Supplier;
 
 import static comfortable_andy.combat.util.VecUtil.*;
 import static net.minecraft.util.Mth.degreesDifference;
@@ -134,13 +131,7 @@ public class CombatPlayerData {
     }
 
     public Vector2f averageCameraAngleDelta() {
-        return average(
-                Vector2f::new,
-                this.lastCameraAngles,
-                Vector2f::add,
-                (v, sub) -> v.set(degreesDifference(v.x, sub.x), degreesDifference(v.y, sub.y)),
-                (v, n) -> v.div(n.floatValue())
-        );
+        return jomlPitchYawAverage(this.lastCameraAngles);
     }
 
     public void resetCameraDelta() {
@@ -162,24 +153,6 @@ public class CombatPlayerData {
 
     public Vector3d latestPos() {
         return this.positionOverride == null ? new Vector3d(this.player.getX(), this.player.getY(), this.player.getZ()) : this.positionOverride;
-    }
-
-    /**
-     * @return average camera angle delta from up to the last {@link #CACHE_COUNT} ticks, where x-axis is yaw (rotX) and y-axis is pitch (rotY)
-     */
-    private <Vec> Vec average(Supplier<Vec> vecSupplier, List<Vec> list, BiFunction<Vec, Vec, Vec> add, BiFunction<Vec, Vec, Vec> sub, BiFunction<Vec, Number, Vec> div) {
-        final Vec accumulator = vecSupplier.get();
-        final int size = list.size();
-        for (int i = 1; i < size; i++) {
-            final Vec cur = list.get(i);
-            if (cur == null) break;
-            final Vec last = list.get(i - 1);
-            final Vec lastToCur = vecSupplier.get();
-            add.apply(lastToCur, cur);
-            sub.apply(lastToCur, last);
-            add.apply(accumulator, lastToCur);
-        }
-        return div.apply(accumulator, size > 0 ? size : 1);
     }
 
     public long getCooldown(boolean main) {
