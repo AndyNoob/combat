@@ -52,6 +52,10 @@ public class VecUtil {
         return v.toString(FORMAT);
     }
 
+    public static String str(Vector2f v) {
+        return v.toString(FORMAT);
+    }
+
     public static Vector2f jomlPitchYawAverage(List<Vector2f> list) {
         return averageList(
                 Vector2f::new,
