@@ -2,6 +2,7 @@ package comfortable_andy.combat;
 
 import com.mojang.datafixers.util.Pair;
 import lombok.Getter;
+import lombok.Setter;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.title.Title;
 import net.kyori.adventure.title.TitlePart;
@@ -56,6 +57,7 @@ public class CombatPlayerData {
     private Vector3d positionDelta = new Vector3d();
     private Pair<Long, Long> attackDelayLeft = new Pair<>(0L, 0L);
     private Pair<Long, Long> noAttackDelayLeft = new Pair<>(0L, 0L);
+    private Vector2f cameraOverride = null;
 
     public CombatPlayerData(Player player) {
         this.player = player;
@@ -65,6 +67,7 @@ public class CombatPlayerData {
     public void tick() {
         final Location location = this.player.getLocation();
         if (location.getWorld() == null) return;
+        this.cameraOverride = null;
         this.enterCamera(new Vector2f(location.getPitch(), location.getYaw()));
         this.attackDelayLeft = this.attackDelayLeft.mapFirst(a -> Math.max(0, a - 1)).mapSecond(a -> Math.max(0, a - 1));
         this.noAttackDelayLeft = this.noAttackDelayLeft.mapFirst(a -> Math.max(0, a - 1)).mapSecond(a -> Math.max(0, a - 1));
@@ -121,6 +124,14 @@ public class CombatPlayerData {
         this.lastCameraAngles.setSize(CACHE_COUNT);
     }
 
+    public void overrideCamera(Vector2f v) {
+        this.cameraOverride = v;
+    }
+
+    public Vector2f latestCameraDir() {
+        return this.cameraOverride == null ? new Vector2f(this.player.getPitch(), this.player.getYaw()) : this.cameraOverride;
+    }
+
     public Vector2f averageCameraAngleDelta() {
         return average(
                 Vector2f::new,
@@ -172,5 +183,4 @@ public class CombatPlayerData {
     public void setNoAttack(boolean main, long amt) {
         this.noAttackDelayLeft = main ? this.noAttackDelayLeft.mapFirst(a -> amt) : this.noAttackDelayLeft.mapSecond(a -> amt);
     }
-
 }

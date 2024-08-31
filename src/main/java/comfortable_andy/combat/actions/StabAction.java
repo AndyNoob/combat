@@ -17,7 +17,7 @@ public class StabAction implements IAction {
         boolean isAttack = type == ActionType.ATTACK;
         PlayerUtil.doSweep(
                 player,
-                fromDir(player.getLocation()),
+                fromDir(data.latestCameraDir()),
                 new Vector3d(),
                 1,
                 isAttack,

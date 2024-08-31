@@ -41,7 +41,7 @@ public class SweepAction extends SweepingAction {
 
         PlayerUtil.doSweep(
                 player,
-                fromDir(player.getEyeLocation()).mul(new Quaterniond().rotateY(Math.toRadians(windBack.y))),
+                fromDir(data.latestCameraDir()).mul(new Quaterniond().rotateY(Math.toRadians(windBack.y))),
                 attack,
                 steps,
                 isAttack,

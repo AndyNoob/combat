@@ -19,6 +19,7 @@ import lombok.Setter;
 import me.comfortable_andy.mapable.Mapable;
 import me.comfortable_andy.mapable.MapableBuilder;
 import org.bukkit.GameMode;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.enchantments.Enchantment;
@@ -37,6 +38,8 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.util.Vector;
+import org.joml.Vector2f;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -242,13 +245,18 @@ public final class CombatMain extends JavaPlugin implements Listener {
     public void onPlayerAttack(PrePlayerAttackEntityEvent e) {
         if (!enabled) return;
         e.setCancelled(true);
+        Player player = e.getPlayer();
+        Location attackedLoc = e.getAttacked().getLocation();
+        Vector direction = attackedLoc.subtract(player.getLocation()).toVector().normalize();
+        attackedLoc.setDirection(direction);
+        getData(player).overrideCamera(new Vector2f(attackedLoc.getPitch(), attackedLoc.getYaw()));
         IAction.ActionType type = IAction.ActionType.ATTACK;
-        if (e.getPlayer().isRiptiding()) {
-            boolean main = canRiptide(e.getPlayer().getInventory().getItemInMainHand());
-            boolean off = canRiptide(e.getPlayer().getInventory().getItemInOffHand());
+        if (player.isRiptiding()) {
+            boolean main = canRiptide(player.getInventory().getItemInMainHand());
+            boolean off = canRiptide(player.getInventory().getItemInOffHand());
             if (off && !main) type = IAction.ActionType.INTERACT;
         }
-        runAction(e.getPlayer(), type, false);
+        runAction(player, type, false);
     }
 
     private boolean canRiptide(ItemStack item) {
