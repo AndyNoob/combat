@@ -224,11 +224,17 @@ public final class CombatMain extends JavaPlugin implements Listener {
     private boolean runAction(Player player, IAction.ActionType actionType, boolean clickedBlock) {
         if (player.getGameMode() == GameMode.SPECTATOR) return false;
         final CombatPlayerData data = getData(player);
+        final boolean isConventional = actionType != IAction.ActionType.DOUBLE_SNEAK;
         final boolean isAttack = actionType == IAction.ActionType.ATTACK;
-        if (data.getNoAttack(isAttack) > 0) return false;
-        if (!isAttack) {
-            player.swingOffHand();
-            if (!clickedBlock) interactBlacklist.add(player);
+        if (isConventional) {
+            if (data.getNoAttack(isAttack) > 0)
+                return false;
+            if (!isAttack) {
+                if (player.getInventory().getItemInOffHand().isEmpty())
+                    return false;
+                player.swingOffHand();
+                if (!clickedBlock) interactBlacklist.add(player);
+            }
         }
         for (IAction action : actions) {
             if (action.tryActivate(player, data, actionType) == IAction.ActionResult.ACTIVATED) {
