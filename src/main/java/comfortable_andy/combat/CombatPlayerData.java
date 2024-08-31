@@ -2,7 +2,6 @@ package comfortable_andy.combat;
 
 import com.mojang.datafixers.util.Pair;
 import lombok.Getter;
-import lombok.Setter;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.title.Title;
 import net.kyori.adventure.title.TitlePart;

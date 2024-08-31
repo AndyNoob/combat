@@ -244,7 +244,6 @@ public final class CombatMain extends JavaPlugin implements Listener {
     @EventHandler
     public void onPlayerAttack(PrePlayerAttackEntityEvent e) {
         if (!enabled) return;
-        e.setCancelled(true);
         Player player = e.getPlayer();
         Location attackedLoc = e.getAttacked().getLocation();
         Vector direction = attackedLoc.subtract(player.getLocation()).toVector().normalize();
@@ -254,8 +253,9 @@ public final class CombatMain extends JavaPlugin implements Listener {
         if (player.isRiptiding()) {
             boolean main = canRiptide(player.getInventory().getItemInMainHand());
             boolean off = canRiptide(player.getInventory().getItemInOffHand());
-            if (off && !main) type = IAction.ActionType.INTERACT;
+            if (off || main) return;
         }
+        e.setCancelled(true);
         runAction(player, type, false);
     }
 
