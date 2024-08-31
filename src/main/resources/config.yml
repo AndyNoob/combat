@@ -30,3 +30,9 @@ box-display-particle: false
 # this has very similar effects to editing wind back but seems to help with hitting
 # sweeps in testing and therefore is on by default
 compensate-camera-movement: true
+
+# When the player can trigger sweep or bash,
+# a subtitle of arrow (down, left/right) is shown
+camera-direction-title: true
+
+double-sneak-threshold-ms: 500
