@@ -92,7 +92,6 @@ public class PlayerUtil {
             Vector2f delta = data.averageCameraAngleDelta();
             start.mul(new Quaterniond().rotateX(-Math.toRadians(delta.x)).rotateY(Math.toRadians(delta.y)));
         }
-        System.out.println(data.averageCameraAngleDelta());
         data.resetCameraDelta();
 
         final var nmsStack = CraftItemStack.asNMSCopy(item);
