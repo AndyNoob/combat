@@ -50,6 +50,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
+import static comfortable_andy.combat.util.VecUtil.fromJoml;
 import static comfortable_andy.combat.util.VecUtil.rotateLocal;
 import static org.bukkit.util.NumberConversions.ceil;
 
@@ -101,7 +102,7 @@ public class PlayerUtil {
 
         PlayerUtil.sweep(
                 player,
-                () -> player.getEyeLocation().add(data.posDelta()),
+                () -> fromJoml(data.latestPos().add(0, player.getEyeHeight(), 0)).toLocation(player.getWorld()).add(data.posDelta()),
                 PlayerUtil.getReach(player),
                 1,
                 start,

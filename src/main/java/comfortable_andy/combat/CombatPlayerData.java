@@ -57,6 +57,7 @@ public class CombatPlayerData {
     private Pair<Long, Long> attackDelayLeft = new Pair<>(0L, 0L);
     private Pair<Long, Long> noAttackDelayLeft = new Pair<>(0L, 0L);
     private Vector2f cameraOverride = null;
+    private Vector3d positionOverride = null;
 
     public CombatPlayerData(Player player) {
         this.player = player;
@@ -67,6 +68,7 @@ public class CombatPlayerData {
         final Location location = this.player.getLocation();
         if (location.getWorld() == null) return;
         this.cameraOverride = null;
+        this.positionOverride = null;
         this.enterCamera(new Vector2f(location.getPitch(), location.getYaw()));
         this.attackDelayLeft = this.attackDelayLeft.mapFirst(a -> Math.max(0, a - 1)).mapSecond(a -> Math.max(0, a - 1));
         this.noAttackDelayLeft = this.noAttackDelayLeft.mapFirst(a -> Math.max(0, a - 1)).mapSecond(a -> Math.max(0, a - 1));
@@ -147,6 +149,19 @@ public class CombatPlayerData {
 
     public org.bukkit.util.Vector posDelta() {
         return fromJoml(positionDelta);
+    }
+
+    public void overridePos(Vector3d v) {
+        this.positionOverride = v;
+    }
+
+    public void overridePosAndCamera(Location v) {
+        this.overridePos(new Vector3d(v.x(), v.y(), v.z()));
+        this.overrideCamera(new Vector2f(v.getPitch(), v.getYaw()));
+    }
+
+    public Vector3d latestPos() {
+        return this.positionOverride == null ? new Vector3d(this.player.getX(), this.player.getY(), this.player.getZ()) : this.positionOverride;
     }
 
     /**

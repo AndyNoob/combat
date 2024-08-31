@@ -21,6 +21,7 @@ import me.comfortable_andy.mapable.MapableBuilder;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Particle;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
@@ -246,9 +247,9 @@ public final class CombatMain extends JavaPlugin implements Listener {
         if (!enabled) return;
         Player player = e.getPlayer();
         Location attackedLoc = e.getAttacked().getLocation();
-        Vector direction = attackedLoc.subtract(player.getLocation()).toVector().normalize();
+        Vector direction = attackedLoc.clone().subtract(player.getLocation()).toVector().normalize();
         attackedLoc.setDirection(direction);
-        getData(player).overrideCamera(new Vector2f(attackedLoc.getPitch(), attackedLoc.getYaw()));
+        getData(player).overridePosAndCamera(attackedLoc.subtract(direction.clone().multiply(3)));
         IAction.ActionType type = IAction.ActionType.ATTACK;
         if (player.isRiptiding()) {
             boolean main = canRiptide(player.getInventory().getItemInMainHand());
