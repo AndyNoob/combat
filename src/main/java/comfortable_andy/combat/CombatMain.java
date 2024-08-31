@@ -5,6 +5,7 @@ import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import comfortable_andy.combat.actions.*;
+import comfortable_andy.combat.compat.CombatSentinelIntegration;
 import comfortable_andy.combat.handler.OrientedBoxHandler;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
@@ -39,6 +40,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 import org.joml.Vector2f;
+import org.mcmonkey.sentinel.SentinelPlugin;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -76,6 +78,7 @@ public final class CombatMain extends JavaPlugin implements Listener {
         INSTANCE = this;
         reload();
         loadActions();
+        loadCompat();
         new CombatRunnable().runTaskTimer(this, 0, 1);
         boxHandler.runTaskTimer(this, 0, 1);
         getServer().getPluginManager().registerEvents(this, this);
@@ -316,6 +319,13 @@ public final class CombatMain extends JavaPlugin implements Listener {
                 new StabAction()
         ));
         getLogger().info("Loaded " + actions);
+    }
+
+    private void loadCompat() {
+        if (getServer().getPluginManager().isPluginEnabled("Sentinel")) {
+            SentinelPlugin.instance.registerIntegration(new CombatSentinelIntegration());
+            getLogger().info("Found Sentinel, added integration.");
+        }
     }
 
     public <V extends IAction> V loadAction(File file, Class<V> clazz) {
