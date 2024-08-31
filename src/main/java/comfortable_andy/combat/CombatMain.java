@@ -31,6 +31,7 @@ import org.bukkit.event.block.BlockDamageAbortEvent;
 import org.bukkit.event.block.BlockDamageEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerToggleSneakEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
@@ -256,6 +257,21 @@ public final class CombatMain extends JavaPlugin implements Listener {
         }
         e.setCancelled(true);
         runAction(player, type, false);
+    }
+
+    private final Map<Player, Long> lastUnSneak = new HashMap<>();
+
+    @EventHandler
+    public void onToggleSneak(PlayerToggleSneakEvent event) {
+        Player player = event.getPlayer();
+        if (!event.isSneaking()) {
+            if (!lastUnSneak.containsKey(player))
+                lastUnSneak.put(player, System.currentTimeMillis());
+        } else {
+            if (!lastUnSneak.containsKey(player)) return;
+            if (System.currentTimeMillis() - lastUnSneak.remove(player) > getConfig().getLong("double-sneak-threshold-ms", 500)) return;
+            runAction(player, IAction.ActionType.DOUBLE_SNEAK, false);
+        }
     }
 
     private boolean canRiptide(ItemStack item) {

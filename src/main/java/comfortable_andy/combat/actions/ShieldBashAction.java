@@ -15,6 +15,8 @@ import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Vector3d;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import static comfortable_andy.combat.util.VecUtil.fromDir;
 import static comfortable_andy.combat.util.VecUtil.fromJoml;
 
@@ -22,28 +24,29 @@ import static comfortable_andy.combat.util.VecUtil.fromJoml;
 public class ShieldBashAction implements IAction {
 
     private boolean enabled = true;
-    private float reach = 2;
-    private float size = 1;
+    private double reach = 2;
+    private double size = 1;
     private int ticks = 2;
     private boolean canParry = true;
-    private float knockBackAmount = 0.7f;
-    private float extraDamage = 2.5f;
+    private double knockBackAmount = 0.7f;
+    private double extraDamage = 2.5f;
     private int durabilityCost = 2;
 
     @Override
     public @NotNull ActionResult tryActivate(Player player, CombatPlayerData data, ActionType type) {
+        if (type != ActionType.DOUBLE_SNEAK) return ActionResult.NONE;
         if (!enabled) return ActionResult.NONE;
         if (!player.isBlocking()) return ActionResult.NONE;
-        if (type != ActionType.ATTACK) return ActionResult.NONE;
         final var playerHandle = ((CraftPlayer) player).getHandle();
         playerHandle.disableShield(null);
         final ItemStack item = player.getInventory().getItemInMainHand().getType() == Material.SHIELD ? player.getInventory().getItemInMainHand() : player.getInventory().getItemInOffHand();
         final double damage = ItemUtil.getAttribute(item, EquipmentSlot.HAND, Attribute.GENERIC_ATTACK_DAMAGE);
+        final AtomicBoolean launched = new AtomicBoolean();
         PlayerUtil.sweep(
                 player,
                 () -> fromJoml(data.latestPos().add(0, player.getEyeHeight(), 0)).toLocation(player.getWorld()).add(data.posDelta()),
-                reach,
-                size,
+                (float) reach,
+                (float) size,
                 fromDir(data.latestCameraDir()),
                 new Vector3d(),
                 2,
@@ -58,7 +61,12 @@ public class ShieldBashAction implements IAction {
                                 EntityKnockbackEvent.Cause.ENTITY_ATTACK
                         );
                         living.damage(damage + extraDamage);
-                        item.damage(durabilityCost, player);
+                        if (!launched.get()) {
+                            launched.set(true);
+                            player.setVelocity(player.getLocation().getDirection().multiply(knockBackAmount));
+                            if (!player.getGameMode().isInvulnerable())
+                                item.damage(durabilityCost, player);
+                        }
                     }
                 },
                 canParry
