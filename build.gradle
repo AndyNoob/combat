@@ -72,7 +72,7 @@ shadowJar {
 }
 
 runServer {
-    jvmArgs('-Xms1G', '-Xmx1G', '-XX:+AllowEnhancedClassRedefinition', '-XX:HotswapAgent=external', '-javaagent:hotswap-agent-1.4.2-SNAPSHOT.jar=disablePlugin=Log4J2')
+    jvmArgs('-Xms1G', '-Xmx1G', '-XX:+AllowEnhancedClassRedefinition', '-javaagent:lib/hotswap/hotswap-agent.jar=disablePlugin=Log4J2')
 }
 
 @SuppressWarnings('GrMethodMayBeStatic')
