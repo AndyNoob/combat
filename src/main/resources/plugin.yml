@@ -2,6 +2,8 @@ name: combat
 version: '${version}'
 main: comfortable_andy.combat.CombatMain
 api-version: '1.20'
+softdepend:
+  - Sentinel
 permissions:
   combat.command.use:
     default: op

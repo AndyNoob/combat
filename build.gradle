@@ -25,6 +25,9 @@ repositories {
         name = "jitback.io"
         url = "https://jitpack.io"
     }
+    maven {
+        url = "https://maven.citizensnpcs.co/repo/"
+    }
 }
 
 dependencies {
@@ -32,6 +35,12 @@ dependencies {
     annotationProcessor 'org.projectlombok:lombok:1.18.32'
     paperweight.paperDevBundle('1.21-R0.1-SNAPSHOT')
     implementation 'com.github.AndyNoob:Mapable:v3.6.0'
+    compileOnly('org.mcmonkey:sentinel:2.9.1-SNAPSHOT') {
+        exclude group: "*"
+    }
+    compileOnly('net.citizensnpcs:citizens-main:2.0.35-SNAPSHOT') {
+        exclude group: "*"
+    }
 }
 
 paperweight {
