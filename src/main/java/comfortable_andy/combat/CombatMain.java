@@ -341,4 +341,20 @@ public final class CombatMain extends JavaPlugin implements Listener {
         return map;
     }
 
+    public void prependAction(IAction action) {
+        this.actions.add(0, action);
+    }
+
+    public void appendAction(IAction action) {
+        this.actions.add(action);
+    }
+
+    public void insertAction(int i, IAction action) {
+        this.actions.add(i, action);
+    }
+
+    public List<IAction> getActions() {
+        return new ArrayList<>(actions);
+    }
+
 }
