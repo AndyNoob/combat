@@ -117,7 +117,7 @@ public class CombatPlayerData {
     /**
      * @param v x-axis is rotX and y-axis is rotY
      */
-    private void enterCamera(Vector2f v) {
+    public void enterCamera(Vector2f v) {
         this.lastCameraAngles.add(0, v);
         this.lastCameraAngles.setSize(CACHE_COUNT);
     }
