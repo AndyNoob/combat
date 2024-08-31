@@ -24,7 +24,7 @@ import static net.minecraft.util.Mth.degreesDifference;
 
 public class CombatPlayerData {
 
-    private static final int CACHE_COUNT = 5;
+    public static final int CACHE_COUNT = 5;
     private static final Field FIRST_GOOD_X;
     private static final Field FIRST_GOOD_Y;
     private static final Field FIRST_GOOD_Z;
