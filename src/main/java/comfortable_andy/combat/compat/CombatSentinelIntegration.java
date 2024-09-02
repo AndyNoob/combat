@@ -27,6 +27,8 @@ import static comfortable_andy.combat.util.VecUtil.bukkitAverage;
 
 public class CombatSentinelIntegration extends SentinelIntegration {
 
+    public static final String META_KEY = "use-combat";
+
     private final Map<SentinelTrait, TrackingData> ticking = new ConcurrentHashMap<>();
 
     public CombatSentinelIntegration() {
@@ -61,7 +63,9 @@ public class CombatSentinelIntegration extends SentinelIntegration {
 
     @Override
     public boolean tryAttack(SentinelTrait st, LivingEntity ent) {
-        final Entity attacker = st.getNPC().getEntity();
+        final NPC npc = st.getNPC();
+        if (!npc.data().get(META_KEY, false)) return false;
+        final Entity attacker = npc.getEntity();
         if (!(attacker instanceof Player player)) return false;
         TrackingData data = ticking.computeIfAbsent(
                 st,
@@ -80,7 +84,7 @@ public class CombatSentinelIntegration extends SentinelIntegration {
         if (player.getEyeLocation()
                 .distanceSquared(ent.getEyeLocation()) > st.reach * st.reach) {
             if (!st.rangedChase) {
-                st.getNPC().getNavigator().cancelNavigation();
+                npc.getNavigator().cancelNavigation();
             }
             // allow long range
             return false;
@@ -117,7 +121,7 @@ public class CombatSentinelIntegration extends SentinelIntegration {
             final double itemCd = PlayerUtil.getCd(player, EquipmentSlot.HAND);
             double scaleFactor = Math.max(0.85, 2 + Math.log10(Math.atan(len)));
             int deduction = len == 0 ? 0 : (int) Math.round(scaleFactor * itemCd);
-            st.getNPC().getNavigator().setTarget(ent, true);
+            npc.getNavigator().setTarget(ent, true);
             combatData.setNoAttack(true, Math.round(combatData.getNoAttack(true) + deduction));
         }
         return true;

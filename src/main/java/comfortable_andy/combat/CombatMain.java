@@ -4,11 +4,14 @@ import com.destroystokyo.paper.MaterialTags;
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.BoolArgumentType;
+import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import comfortable_andy.combat.actions.*;
 import comfortable_andy.combat.compat.CombatSentinelIntegration;
 import comfortable_andy.combat.handler.OrientedBoxHandler;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
+import io.papermc.paper.command.brigadier.argument.ArgumentTypes;
+import io.papermc.paper.command.brigadier.argument.resolvers.selector.EntitySelectorArgumentResolver;
 import io.papermc.paper.event.player.PrePlayerAttackEntityEvent;
 import io.papermc.paper.plugin.lifecycle.event.LifecycleEventManager;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
@@ -17,6 +20,8 @@ import lombok.Setter;
 import me.comfortable_andy.mapable.Mapable;
 import me.comfortable_andy.mapable.MapableBuilder;
 import net.citizensnpcs.api.CitizensAPI;
+import net.citizensnpcs.api.npc.NPC;
+import net.minecraft.network.chat.Component;
 import org.bukkit.*;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.enchantments.Enchantment;
@@ -38,6 +43,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 import org.mcmonkey.sentinel.SentinelPlugin;
+import org.mcmonkey.sentinel.SentinelTrait;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -67,6 +73,7 @@ public final class CombatMain extends JavaPlugin implements Listener {
     private SweepAction sweep;
     @Getter
     private BashAction bash;
+    @Getter
     private ShieldBashAction shieldBash;
 
     @SuppressWarnings("UnstableApiUsage")
@@ -100,17 +107,49 @@ public final class CombatMain extends JavaPlugin implements Listener {
                     enable = !enabled;
                 }
                 enabled = enable;
-                s.getSource().getSender().sendMessage("Enabled: " + enabled);
+                s.getSource().getSender().sendMessage("Enabled Combat: " + enabled);
                 return Command.SINGLE_SUCCESS;
             };
-            final var enableArg = Commands.argument("enable", BoolArgumentType.bool())
-                    .executes(enableExecutor);
+            final Command<CommandSourceStack> npcExecutor = s -> {
+                final EntitySelectorArgumentResolver selector = s.getArgument("npc", EntitySelectorArgumentResolver.class);
+                NPC npc = CitizensAPI.getNPCRegistry().getNPC(selector.resolve(s.getSource()).get(0));
+                if (npc == null) {
+                    throw new SimpleCommandExceptionType(Component.literal("NPC not found.")).create();
+                }
+                if (!npc.hasTrait(SentinelTrait.class)) {
+                    throw new SimpleCommandExceptionType(Component.literal("NPC a sentinel.")).create();
+                }
+                Boolean enable;
+                try {
+                    enable = s.getArgument("enable", Boolean.class);
+                } catch (Exception e) {
+                    enable = !npc.data().get(CombatSentinelIntegration.META_KEY, false);
+                }
+                npc.data().setPersistent(CombatSentinelIntegration.META_KEY, enable);
+                s.getSource().getSender().sendMessage("Enabled NPC \"" + npc.getName() + "\": " + npc.data().get(CombatSentinelIntegration.META_KEY));
+                return Command.SINGLE_SUCCESS;
+            };
             final var enable = Commands
                     .literal("enable")
                     .requires(s -> s.getSender()
                             .hasPermission("combat.command.enable"))
-                    .then(enableArg)
-                    .executes(enableExecutor);
+                    .then(Commands.literal("combat")
+                            .then(Commands
+                                    .argument("enable", BoolArgumentType.bool())
+                                    .executes(enableExecutor)
+                            )
+                            .executes(enableExecutor)
+                    )
+                    .then(Commands.literal("npc")
+                            .then(Commands
+                                    .argument("npc", ArgumentTypes.entity())
+                                    .requires(s -> getServer().getPluginManager().isPluginEnabled("Sentinel"))
+                                    .then(Commands
+                                            .argument("enable", BoolArgumentType.bool())
+                                            .executes(npcExecutor)
+                                    )
+                                    .executes(npcExecutor))
+                    );
             final var show = Commands
                     .literal("show")
                     .then(Commands.literal("debug_msg").executes(s -> {
