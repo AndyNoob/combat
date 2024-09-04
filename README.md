@@ -1,4 +1,5 @@
 # Combat reimagined plugin by @AndyNoob
+[![wakatime](https://wakatime.com/badge/user/018ce26d-cc0f-41ad-a476-75b8f5dee1cb/project/7d782114-44d7-4163-837a-63ffde49bbca.svg)](https://wakatime.com/badge/user/018ce26d-cc0f-41ad-a476-75b8f5dee1cb/project/7d782114-44d7-4163-837a-63ffde49bbca)
 ## Goal
 Essentially, this Paper-only plugin aims to make combat more varied. In addition to allowing dual wielding, this system has three different attack types on top of default: sweep, stab (default Minecraft attack with different hit detection), and chop. The trigger for these attacks are based on the camera movement. For instance, if a player moves their camera horizontally quickly and attacks, a sweep attack would be registered.
 ## Showcase
