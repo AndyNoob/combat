@@ -105,11 +105,12 @@ public class CombatPlayerData {
                 arrow = delta.y > 0 ? "→" : "←";
             else if (CombatMain.getInstance().getBash().triggered(delta))
                 arrow = "↓";
+            if (arrow.isEmpty()) return;
             player.sendTitlePart(TitlePart.TITLE, Component.empty());
             player.sendTitlePart(TitlePart.SUBTITLE, Component.text(arrow));
             player.sendTitlePart(TitlePart.TIMES, Title.Times.times(
                     Ticks.duration(0),
-                    Ticks.duration(10),
+                    Ticks.duration(5),
                     Ticks.duration(0)
             ));
         }
