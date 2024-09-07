@@ -81,8 +81,9 @@ public class CombatSentinelIntegration extends SentinelIntegration {
         combatData.getOptions().compensateCameraMovement(false);
         st.faceLocation(ent.getEyeLocation());
         st.attackHelper.rechase();
+        final double reach = ent instanceof Player pl ? PlayerUtil.getReach(pl) : st.reach;
         if (player.getEyeLocation()
-                .distanceSquared(ent.getEyeLocation()) > st.reach * st.reach) {
+                .distanceSquared(ent.getEyeLocation()) > reach * reach) {
             if (!st.rangedChase) {
                 npc.getNavigator().cancelNavigation();
             }
