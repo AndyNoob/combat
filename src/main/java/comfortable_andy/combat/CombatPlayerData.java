@@ -110,7 +110,7 @@ public class CombatPlayerData {
             player.sendTitlePart(TitlePart.SUBTITLE, Component.text(arrow));
             player.sendTitlePart(TitlePart.TIMES, Title.Times.times(
                     Ticks.duration(0),
-                    Ticks.duration(5),
+                    Ticks.duration(1),
                     Ticks.duration(0)
             ));
         }
