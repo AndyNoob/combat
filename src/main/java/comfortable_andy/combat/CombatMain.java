@@ -8,6 +8,7 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import comfortable_andy.combat.actions.*;
 import comfortable_andy.combat.compat.CombatSentinelIntegration;
 import comfortable_andy.combat.handler.OrientedBoxHandler;
+import comfortable_andy.combat.util.PlayerUtil;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import io.papermc.paper.command.brigadier.argument.ArgumentTypes;
@@ -25,6 +26,8 @@ import net.minecraft.network.chat.Component;
 import org.bukkit.*;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -112,7 +115,7 @@ public final class CombatMain extends JavaPlugin implements Listener {
             };
             final Command<CommandSourceStack> npcExecutor = s -> {
                 final EntitySelectorArgumentResolver selector = s.getArgument("npc", EntitySelectorArgumentResolver.class);
-                NPC npc = CitizensAPI.getNPCRegistry().getNPC(selector.resolve(s.getSource()).get(0));
+                NPC npc = CitizensAPI.getNPCRegistry().getNPC(selector.resolve(s.getSource()).getFirst());
                 if (npc == null) {
                     throw new SimpleCommandExceptionType(Component.literal("NPC not found.")).create();
                 }
@@ -289,11 +292,14 @@ public final class CombatMain extends JavaPlugin implements Listener {
     @EventHandler
     public void onPlayerAttack(PrePlayerAttackEntityEvent e) {
         if (!enabled) return;
-        Player player = e.getPlayer();
-        Location attackedLoc = e.getAttacked().getLocation();
-        Vector direction = attackedLoc.clone().subtract(player.getLocation()).toVector().normalize();
-        attackedLoc.setDirection(direction);
-        getData(player).overridePosAndCamera(attackedLoc.subtract(direction.clone().multiply(3)));
+        final Player player = e.getPlayer();
+        final Entity attacked = e.getAttacked();
+        final Vector direction = (attacked instanceof LivingEntity le ? le.getEyeLocation() : attacked.getLocation()).clone().subtract(player.getEyeLocation()).toVector().normalize();
+        final Vector reachDirection = direction.clone().multiply(PlayerUtil.getReach(player));
+        final Location compensatedLocation = attacked.getLocation().add(reachDirection.clone().multiply(-1));
+        compensatedLocation.subtract(0, Math.max(0, player.getHeight() - attacked.getHeight()), 0);
+        compensatedLocation.setDirection(direction);
+        getData(player).overridePosAndCamera(compensatedLocation);
         IAction.ActionType type = IAction.ActionType.ATTACK;
         if (player.isRiptiding()) {
             boolean main = canRiptide(player.getInventory().getItemInMainHand());
@@ -390,7 +396,7 @@ public final class CombatMain extends JavaPlugin implements Listener {
                 final Set<String> keys = e.getValue();
 
                 Map<String, Object> addingTo = path.isEmpty() ? map : (Map<String, Object>) map
-                        .computeIfAbsent(path.get(0), k -> new HashMap<>());
+                        .computeIfAbsent(path.getFirst(), k -> new HashMap<>());
 
                 for (int i = 1; i < path.size(); i++) {
                     final String s = path.get(i);
@@ -417,7 +423,7 @@ public final class CombatMain extends JavaPlugin implements Listener {
     }
 
     public void prependAction(IAction action) {
-        this.actions.add(0, action);
+        this.actions.addFirst(action);
     }
 
     public void appendAction(IAction action) {

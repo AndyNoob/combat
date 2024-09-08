@@ -19,7 +19,6 @@ import org.joml.Vector3d;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 import static comfortable_andy.combat.util.VecUtil.*;
 
@@ -51,6 +50,23 @@ public class OrientedBox implements Cloneable {
         this.vertices[4] = min.clone().add(new Vector(0, height, 0));
         this.vertices[5] = min.clone().add(new Vector(widthX, height, 0));
         this.vertices[6] = min.clone().add(new Vector(0, height, widthZ));
+    }
+
+    public static void displayLine(World world, Vector3d start, Vector3d delta, Color col, Collection<? extends Player> players) {
+        for (int j = 0; j < 5; j++) {
+            for (Player player : players) {
+                player.spawnParticle(
+                        Particle.DUST,
+                        fromJoml(start.lerp(start.add(delta, new Vector3d()), j / 5d)).toLocation(world),
+                        1,
+                        0,
+                        0,
+                        0,
+                        0,
+                        new Particle.DustOptions(col, 1)
+                );
+            }
+        }
     }
 
     public OrientedBox setCenter(Vector center) {
@@ -148,23 +164,11 @@ public class OrientedBox implements Cloneable {
                 for (int i = 0; i < 3; i++) {
                     final Vector3d vector = axis.getColumn(i, new Vector3d());
                     final Color col = colors.next();
-                    for (int j = 0; j < 5; j++) {
-                        for (Player player : players) {
-                            player.spawnParticle(
-                                    Particle.DUST,
-                                    fromJoml(center.toVector3d().lerp(center.toVector3d().add(vector), j / 5d)).toLocation(world),
-                                    1,
-                                    0,
-                                    0,
-                                    0,
-                                    0,
-                                    new Particle.DustOptions(col, 1)
-                            );
-                        }
-                    }
+                    displayLine(world, center.toVector3d(), vector, col, players);
                 }
                 if (count-- <= 0) cancel();
             }
+
         }.runTaskTimer(CombatMain.getInstance(), 0, 20);
     }
 
