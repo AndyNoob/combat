@@ -65,14 +65,13 @@ public class PlayerUtil {
         }
     }
 
-    public static void doSweep(Player player, Quaterniond start, Vector3d attack, int steps, boolean isAttack, double speedMod, double damageMod, long ticksLeft, CombatPlayerData data) {
+    public static void doSweep(Player player, Quaterniond start, Vector3d attack, int steps, boolean isAttack, double speedMod, double actionDamageMod, long ticksLeft, CombatPlayerData data) {
         final EquipmentSlot slot = isAttack ? EquipmentSlot.HAND : EquipmentSlot.OFF_HAND;
         final double cd = getCd(player, slot);
         final int ticks = ceil(cd * speedMod);
         final ItemStack item = player.getInventory().getItem(slot);
         final double strengthScale = Mth.clamp((ticks - ticksLeft + 0.5) / ticks, 0, 1);
         final AtomicBoolean sentStrongKnockBack = new AtomicBoolean();
-        final AtomicBoolean updatedExhaust = new AtomicBoolean();
         final double knockBack = getKnockBack(player, slot) + (strengthScale > 0.9 && player.isSprinting() ? 1 : 0);
         final ServerPlayer playerHandle = ((CraftPlayer) player).getHandle();
         final double initialDamage;
@@ -81,7 +80,7 @@ public class PlayerUtil {
         } catch (ReflectiveOperationException e) {
             throw new RuntimeException(e);
         }
-        final double finalDamage = initialDamage * damageMod;
+        final double actionModdedDamage = initialDamage * actionDamageMod;
         if (data.getOptions().compensateCameraMovement()) {
             Vector2f delta = data.averageCameraAngleDelta();
             start.mul(new Quaterniond().rotateX(-Math.toRadians(delta.x)).rotateY(Math.toRadians(delta.y)));
@@ -100,32 +99,30 @@ public class PlayerUtil {
                 attack,
                 steps,
                 ticksPerStep,
-                (e, mtv) -> handleVanillaLikeAttack(
+                (e, mtv) -> player.getInventory().setItem(slot, handleVanillaLikeAttack(
                         player,
                         e,
                         item,
                         mtv,
                         knockBack,
-                        finalDamage,
+                        actionModdedDamage,
                         strengthScale,
-                        sentStrongKnockBack,
-                        updatedExhaust
-                ),
+                        sentStrongKnockBack
+                )),
                 strengthScale > 0.9
         );
     }
 
     @SuppressWarnings({"UnstableApiUsage", "deprecation"})
-    public static void handleVanillaLikeAttack(Player player,
-                                                Entity target,
-                                                ItemStack item,
-                                                Vector knockBackDir,
-                                                double knockBack,
-                                                double finalDamage,
-                                                double strengthScale,
-                                                AtomicBoolean sentStrongKnockBack,
-                                                AtomicBoolean updatedExhaust) {
-        if (!canAttack(player, target)) return;
+    public static ItemStack handleVanillaLikeAttack(Player player,
+                                               Entity target,
+                                               ItemStack item,
+                                               Vector knockBackDir,
+                                               double knockBack,
+                                               double unModdedDamage,
+                                               double strengthScale,
+                                               AtomicBoolean sentStrongKnockBack) {
+        if (!canAttack(player, target)) return item;
         final var targetHandle = ((CraftEntity) target).getHandle();
         final var playerHandle = ((CraftPlayer) player).getHandle();
         final World world = player.getWorld();
@@ -137,7 +134,7 @@ public class PlayerUtil {
             // TODO decide if this should call non living damage event
             if (((Projectile) targetHandle).deflect(ProjectileDeflection.AIM_DEFLECT, playerHandle, playerHandle, true)) {
                 world.playSound(player.getLocation(), Sound.ENTITY_PLAYER_ATTACK_NODAMAGE, SoundCategory.PLAYERS, 1, 1);
-                return;
+                return item;
             }
         }
         final DamageSource source = DamageSource
@@ -166,12 +163,12 @@ public class PlayerUtil {
                 nmsStack,
                 targetHandle,
                 sourceHandle,
-                (float) finalDamage
-        ) - finalDamage;
+                (float) unModdedDamage
+        ) - unModdedDamage;
         final double bonus = nmsItem
-                .getAttackDamageBonus(targetHandle, (float) finalDamage, sourceHandle);
+                .getAttackDamageBonus(targetHandle, (float) unModdedDamage, sourceHandle);
         final boolean critical = strengthScale > 0.9 && !player.isClimbing() && player.getFallDistance() > 0 && !player.isOnGround() && !player.isInWater() && !player.isSprinting() && !player.isInsideVehicle() && !player.hasPotionEffect(PotionEffectType.BLINDNESS) && !paperConfig.entities.behavior.disablePlayerCrits;
-        double finalFinalDamage = finalDamage + bonus + enchantmentDamage * strengthScale;
+        double finalFinalDamage = unModdedDamage + bonus + enchantmentDamage * strengthScale;
         final Location location = player.getLocation();
         if (critical) {
             sourceHandle.critical();
@@ -192,23 +189,27 @@ public class PlayerUtil {
                     ((CraftLivingEntity) livingEntity).getHandle(),
                     playerHandle
             );
-            EnchantmentHelper.doPostAttackEffectsWithItemSource(
-                    level,
-                    targetHandle,
-                    sourceHandle,
-                    nmsStack
-            );
         }
 
-        if (doPost)
+        EnchantmentHelper.doPostAttackEffectsWithItemSource(
+                level,
+                targetHandle,
+                sourceHandle,
+                nmsStack
+        );
+
+        if (doPost) {
             nmsStack.postHurtEnemy(
                     (net.minecraft.world.entity.LivingEntity) targetHandle,
                     playerHandle
             );
+        }
+
+        item = CraftItemStack.asCraftMirror(nmsStack);
 
         if (!(hurt)) {
             world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_NODAMAGE, 1, 1);
-            return;
+            return item;
         }
 
         if (critical) {
@@ -241,10 +242,8 @@ public class PlayerUtil {
             }
         }
 
-        if (!updatedExhaust.get()) {
-            playerHandle.causeFoodExhaustion(level.spigotConfig.combatExhaustion, EntityExhaustionEvent.ExhaustionReason.ATTACK);
-            updatedExhaust.set(true);
-        }
+        playerHandle.causeFoodExhaustion(level.spigotConfig.combatExhaustion, EntityExhaustionEvent.ExhaustionReason.ATTACK);
+        return item;
     }
 
     /**
