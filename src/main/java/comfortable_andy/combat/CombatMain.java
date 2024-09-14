@@ -56,6 +56,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import static comfortable_andy.combat.util.PlayerUtil.getCd;
 import static org.bukkit.util.NumberConversions.ceil;
 
+@SuppressWarnings("unused")
 public final class CombatMain extends JavaPlugin implements Listener {
 
     private static CombatMain INSTANCE;

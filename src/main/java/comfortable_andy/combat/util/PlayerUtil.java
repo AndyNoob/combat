@@ -6,7 +6,6 @@ import comfortable_andy.combat.handler.OrientedBoxHandler;
 import io.papermc.paper.configuration.WorldConfiguration;
 import io.papermc.paper.event.entity.EntityKnockbackEvent;
 import net.kyori.adventure.key.Key;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.projectile.Projectile;
@@ -25,7 +24,6 @@ import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.bukkit.damage.DamageSource;
 import org.bukkit.damage.DamageType;
-import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -67,7 +65,6 @@ public class PlayerUtil {
         }
     }
 
-    @SuppressWarnings("UnstableApiUsage")
     public static void doSweep(Player player, Quaterniond start, Vector3d attack, int steps, boolean isAttack, double speedMod, double damageMod, long ticksLeft, CombatPlayerData data) {
         final EquipmentSlot slot = isAttack ? EquipmentSlot.HAND : EquipmentSlot.OFF_HAND;
         final double cd = getCd(player, slot);
@@ -76,7 +73,7 @@ public class PlayerUtil {
         final double strengthScale = Mth.clamp((ticks - ticksLeft + 0.5) / ticks, 0, 1);
         final AtomicBoolean sentStrongKnockBack = new AtomicBoolean();
         final AtomicBoolean updatedExhaust = new AtomicBoolean();
-        final double knockBack = getKnockBack(player, slot) + (strengthScale > 0.9 && player.isSprinting() ? 1 : 0) + item.getEnchantmentLevel(Enchantment.KNOCKBACK);
+        final double knockBack = getKnockBack(player, slot) + (strengthScale > 0.9 && player.isSprinting() ? 1 : 0);
         final ServerPlayer playerHandle = ((CraftPlayer) player).getHandle();
         final double initialDamage;
         try {
@@ -85,17 +82,11 @@ public class PlayerUtil {
             throw new RuntimeException(e);
         }
         final double finalDamage = initialDamage * damageMod;
-        final World world = player.getWorld();
-        final ServerLevel level = ((CraftWorld) world).getHandle();
-        final WorldConfiguration paperConfig = level.paperConfig();
         if (data.getOptions().compensateCameraMovement()) {
             Vector2f delta = data.averageCameraAngleDelta();
             start.mul(new Quaterniond().rotateX(-Math.toRadians(delta.x)).rotateY(Math.toRadians(delta.y)));
         }
         data.resetCameraDelta();
-
-        final var nmsStack = CraftItemStack.asNMSCopy(item);
-        final Item nmsItem = nmsStack.getItem();
 
         final int ticksPerStep = steps <= 1 ? 1 : ceil(ticks / (steps + 0d));
         data.setNoAttack(isAttack, steps <= 1 ? 0 : ticks);
@@ -109,123 +100,151 @@ public class PlayerUtil {
                 attack,
                 steps,
                 ticksPerStep,
-                (e, mtv) -> {
-                    if (!canAttack(player, e)) return;
-                    final var entityHandle = ((CraftEntity) e).getHandle();
-                    if (Tag.ENTITY_TYPES_REDIRECTABLE_PROJECTILE.isTagged(e.getType())) {
-                        // TODO decide if this should call non living damage event
-                        if (((Projectile) entityHandle).deflect(ProjectileDeflection.AIM_DEFLECT, playerHandle, playerHandle, true)) {
-                            world.playSound(player.getLocation(), Sound.ENTITY_PLAYER_ATTACK_NODAMAGE, SoundCategory.PLAYERS, 1, 1);
-                            return;
-                        }
-                    }
-                    if (knockBack > 0 && e instanceof LivingEntity living) {
-                        playerHandle.setDeltaMovement(playerHandle.getDeltaMovement().multiply(0.6, 1, 0.6));
-                        if (!paperConfig.misc.disableSprintInterruptionOnAttack) {
-                            player.setSprinting(false);
-                        }
-                        ((CraftLivingEntity) living).getHandle().knockback(
-                                knockBack,
-                                -mtv.getX(),
-                                -mtv.getZ(),
-                                playerHandle,
-                                EntityKnockbackEvent.Cause.ENTITY_ATTACK
-                        );
-                    }
-                    final DamageSource source = DamageSource
-                            .builder(DamageType.PLAYER_ATTACK)
-                            .withCausingEntity(player)
-                            .withDirectEntity(player)
-                            .build();
-                    net.minecraft.world.damagesource.DamageSource sourceHandle = ((CraftDamageSource) source).getHandle();
-                    final double enchantmentDamage = EnchantmentHelper.modifyDamage(
-                            level,
-                            nmsStack,
-                            entityHandle,
-                            sourceHandle,
-                            (float) finalDamage
-                    ) - finalDamage;
-                    final double bonus = nmsItem
-                            .getAttackDamageBonus(entityHandle, (float) finalDamage, sourceHandle);
-
-                    @SuppressWarnings("deprecation") final boolean critical = strengthScale > 0.9 && !player.isClimbing() && player.getFallDistance() > 0 && !player.isOnGround() && !player.isInWater() && !player.isSprinting() && !player.isInsideVehicle() && !player.hasPotionEffect(PotionEffectType.BLINDNESS) && !paperConfig.entities.behavior.disablePlayerCrits;
-                    double finalFinalDamage = finalDamage + bonus + enchantmentDamage * strengthScale;
-                    final Location location = player.getLocation();
-                    if (critical) {
-                        sourceHandle.critical();
-                        finalFinalDamage *= 1.5;
-                    }
-                    if (player.isSprinting() && !sentStrongKnockBack.get()) {
-                        world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_KNOCKBACK, 1, 1);
-                        sentStrongKnockBack.set(true);
-                    }
-                    final double hpBefore = e instanceof LivingEntity le ? le.getHealth() : -1;
-                    final boolean hurt = entityHandle.hurt(
-                            sourceHandle,
-                            (float) finalFinalDamage
-                    );
-                    boolean doPost = false;
-                    if (e instanceof LivingEntity livingEntity) {
-                        doPost = nmsStack.hurtEnemy(
-                                ((CraftLivingEntity) livingEntity).getHandle(),
-                                playerHandle
-                        );
-                        EnchantmentHelper.doPostAttackEffectsWithItemSource(
-                                level,
-                                entityHandle,
-                                sourceHandle,
-                                nmsStack
-                        );
-                    }
-
-                    if (doPost)
-                        nmsStack.postHurtEnemy(
-                                (net.minecraft.world.entity.LivingEntity) entityHandle,
-                                playerHandle
-                        );
-
-                    if (!(hurt)) {
-                        world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_NODAMAGE, 1, 1);
-                        return;
-                    }
-
-                    if (critical) {
-                        world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_CRIT, 1, 1);
-                        playerHandle.crit(entityHandle);
-                    } else {
-                        if (strengthScale > 0.9)
-                            world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_STRONG, 1, 1);
-                        else world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_WEAK, 1, 1);
-                    }
-                    if (enchantmentDamage > 0) {
-                        playerHandle.magicCrit(entityHandle);
-                    }
-                    if (hpBefore != -1) {
-                        final double actualDamage = hpBefore - ((LivingEntity) e).getHealth();
-                        final int addingToStat = (int) Math.round(actualDamage * 10);
-                        if (addingToStat > 0) player.incrementStatistic(Statistic.DAMAGE_DEALT, addingToStat);
-                        final int hearts = (int) (actualDamage / 2);
-
-                        if (hearts > 0) {
-                            world.spawnParticle(
-                                    Particle.DAMAGE_INDICATOR,
-                                    e.getLocation().add(0, e.getBoundingBox().getHeight() / 2, 0),
-                                    hearts,
-                                    0.1,
-                                    0.0,
-                                    0.1,
-                                    0.2
-                            );
-                        }
-                    }
-
-                    if (!updatedExhaust.get()) {
-                        playerHandle.causeFoodExhaustion(level.spigotConfig.combatExhaustion, EntityExhaustionEvent.ExhaustionReason.ATTACK);
-                        updatedExhaust.set(true);
-                    }
-                },
+                (e, mtv) -> handleVanillaLikeAttack(
+                        player,
+                        e,
+                        item,
+                        mtv,
+                        knockBack,
+                        finalDamage,
+                        strengthScale,
+                        sentStrongKnockBack,
+                        updatedExhaust
+                ),
                 strengthScale > 0.9
         );
+    }
+
+    @SuppressWarnings({"UnstableApiUsage", "deprecation"})
+    public static void handleVanillaLikeAttack(Player player,
+                                                Entity target,
+                                                ItemStack item,
+                                                Vector knockBackDir,
+                                                double knockBack,
+                                                double finalDamage,
+                                                double strengthScale,
+                                                AtomicBoolean sentStrongKnockBack,
+                                                AtomicBoolean updatedExhaust) {
+        if (!canAttack(player, target)) return;
+        final var targetHandle = ((CraftEntity) target).getHandle();
+        final var playerHandle = ((CraftPlayer) player).getHandle();
+        final World world = player.getWorld();
+        final var level = ((CraftWorld) world).getHandle();
+        final WorldConfiguration paperConfig = level.paperConfig();
+        final var nmsStack = CraftItemStack.asNMSCopy(item);
+        final var nmsItem = nmsStack.getItem();
+        if (Tag.ENTITY_TYPES_REDIRECTABLE_PROJECTILE.isTagged(target.getType())) {
+            // TODO decide if this should call non living damage event
+            if (((Projectile) targetHandle).deflect(ProjectileDeflection.AIM_DEFLECT, playerHandle, playerHandle, true)) {
+                world.playSound(player.getLocation(), Sound.ENTITY_PLAYER_ATTACK_NODAMAGE, SoundCategory.PLAYERS, 1, 1);
+                return;
+            }
+        }
+        final DamageSource source = DamageSource
+                .builder(DamageType.PLAYER_ATTACK)
+                .withCausingEntity(player)
+                .withDirectEntity(player)
+                .build();
+        final var sourceHandle = ((CraftDamageSource) source).getHandle();
+        knockBack = EnchantmentHelper.modifyKnockback(level, nmsStack, targetHandle, sourceHandle, (float) knockBack);
+
+        if (knockBack > 0 && target instanceof LivingEntity living) {
+            playerHandle.setDeltaMovement(playerHandle.getDeltaMovement().multiply(0.6, 1, 0.6));
+            if (!paperConfig.misc.disableSprintInterruptionOnAttack) {
+                player.setSprinting(false);
+            }
+            ((CraftLivingEntity) living).getHandle().knockback(
+                    knockBack,
+                    -knockBackDir.getX(),
+                    -knockBackDir.getZ(),
+                    playerHandle,
+                    EntityKnockbackEvent.Cause.ENTITY_ATTACK
+            );
+        }
+        final double enchantmentDamage = EnchantmentHelper.modifyDamage(
+                level,
+                nmsStack,
+                targetHandle,
+                sourceHandle,
+                (float) finalDamage
+        ) - finalDamage;
+        final double bonus = nmsItem
+                .getAttackDamageBonus(targetHandle, (float) finalDamage, sourceHandle);
+        final boolean critical = strengthScale > 0.9 && !player.isClimbing() && player.getFallDistance() > 0 && !player.isOnGround() && !player.isInWater() && !player.isSprinting() && !player.isInsideVehicle() && !player.hasPotionEffect(PotionEffectType.BLINDNESS) && !paperConfig.entities.behavior.disablePlayerCrits;
+        double finalFinalDamage = finalDamage + bonus + enchantmentDamage * strengthScale;
+        final Location location = player.getLocation();
+        if (critical) {
+            sourceHandle.critical();
+            finalFinalDamage *= 1.5;
+        }
+        if (player.isSprinting() && !sentStrongKnockBack.get()) {
+            world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_KNOCKBACK, 1, 1);
+            sentStrongKnockBack.set(true);
+        }
+        final double hpBefore = target instanceof LivingEntity le ? le.getHealth() : -1;
+        final boolean hurt = targetHandle.hurt(
+                sourceHandle,
+                (float) finalFinalDamage
+        );
+        boolean doPost = false;
+        if (target instanceof LivingEntity livingEntity) {
+            doPost = nmsStack.hurtEnemy(
+                    ((CraftLivingEntity) livingEntity).getHandle(),
+                    playerHandle
+            );
+            EnchantmentHelper.doPostAttackEffectsWithItemSource(
+                    level,
+                    targetHandle,
+                    sourceHandle,
+                    nmsStack
+            );
+        }
+
+        if (doPost)
+            nmsStack.postHurtEnemy(
+                    (net.minecraft.world.entity.LivingEntity) targetHandle,
+                    playerHandle
+            );
+
+        if (!(hurt)) {
+            world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_NODAMAGE, 1, 1);
+            return;
+        }
+
+        if (critical) {
+            world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_CRIT, 1, 1);
+            playerHandle.crit(targetHandle);
+        } else {
+            if (strengthScale > 0.9)
+                world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_STRONG, 1, 1);
+            else world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_WEAK, 1, 1);
+        }
+        if (enchantmentDamage > 0) {
+            playerHandle.magicCrit(targetHandle);
+        }
+        if (hpBefore != -1) {
+            final double actualDamage = hpBefore - ((LivingEntity) target).getHealth();
+            final int addingToStat = (int) Math.round(actualDamage * 10);
+            if (addingToStat > 0) player.incrementStatistic(Statistic.DAMAGE_DEALT, addingToStat);
+            final int hearts = (int) (actualDamage / 2);
+
+            if (hearts > 0) {
+                world.spawnParticle(
+                        Particle.DAMAGE_INDICATOR,
+                        target.getLocation().add(0, target.getBoundingBox().getHeight() / 2, 0),
+                        hearts,
+                        0.1,
+                        0.0,
+                        0.1,
+                        0.2
+                );
+            }
+        }
+
+        if (!updatedExhaust.get()) {
+            playerHandle.causeFoodExhaustion(level.spigotConfig.combatExhaustion, EntityExhaustionEvent.ExhaustionReason.ATTACK);
+            updatedExhaust.set(true);
+        }
     }
 
     /**
