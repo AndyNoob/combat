@@ -8,12 +8,12 @@ import net.minecraft.util.Mth;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
-import org.joml.*;
+import org.joml.Quaterniond;
+import org.joml.Vector2f;
 
-import java.lang.Math;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static comfortable_andy.combat.util.VecUtil.*;
+import static comfortable_andy.combat.util.VecUtil.fromDir;
 
 @SuppressWarnings({"FieldMayBeFinal", "FieldCanBeLocal"})
 public class SwingAction implements IAction {

@@ -1,7 +1,6 @@
 package comfortable_andy.combat;
 
 import lombok.Data;
-import lombok.Getter;
 import lombok.experimental.Accessors;
 
 @Data

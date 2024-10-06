@@ -2,9 +2,11 @@ package comfortable_andy.combat.util;
 
 import org.bukkit.Location;
 import org.bukkit.util.Vector;
-import org.joml.*;
+import org.joml.Matrix3d;
+import org.joml.Quaterniond;
+import org.joml.Vector2f;
+import org.joml.Vector3d;
 
-import java.lang.Math;
 import java.text.DecimalFormat;
 import java.util.List;
 import java.util.function.BiFunction;
