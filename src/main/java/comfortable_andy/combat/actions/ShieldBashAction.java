@@ -43,7 +43,6 @@ public class ShieldBashAction implements IAction {
         final double damage = ItemUtil.getAttribute(item, EquipmentSlot.HAND, Attribute.GENERIC_ATTACK_DAMAGE);
         final AtomicBoolean launched = new AtomicBoolean();
         PlayerUtil.sweep(
-                player,
                 () -> fromJoml(data.latestPos().add(0, player.getEyeHeight(), 0)).toLocation(player.getWorld()).add(data.posDelta()),
                 (float) reach,
                 (float) size,

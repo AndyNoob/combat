@@ -26,7 +26,7 @@ public class OrientedBox implements Cloneable {
 
     @Getter
     private Vector center;
-    private Vector[] vertices = new Vector[8];
+    private Vector[] vertices = new Vector[8]; // world space
     @Getter
     private final Matrix3d axis = new Matrix3d();
 

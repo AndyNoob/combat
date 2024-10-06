@@ -49,6 +49,9 @@ import org.mcmonkey.sentinel.SentinelPlugin;
 import org.mcmonkey.sentinel.SentinelTrait;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -85,7 +88,6 @@ public final class CombatMain extends JavaPlugin implements Listener {
     public void onEnable() {
         INSTANCE = this;
         reload();
-        loadActions();
         loadCompat();
         new CombatRunnable().runTaskTimer(this, 0, 1);
         boxHandler.runTaskTimer(this, 0, 1);
@@ -185,6 +187,7 @@ public final class CombatMain extends JavaPlugin implements Listener {
         reloadConfig();
         enabled = getConfig().getBoolean("enabled");
         combatOptions = new CombatOptions();
+        loadActions();
     }
 
     public static CombatMain getInstance() {
@@ -350,18 +353,12 @@ public final class CombatMain extends JavaPlugin implements Listener {
 
     public void loadActions() {
         actions.clear();
-        final Path dataPath = getDataFolder().toPath();
-        final File sweepFile = new File(getDataFolder(), "actions/sweep.yml");
-        final File bashFile = new File(getDataFolder(), "actions/bash.yml");
-        final File shieldBashFile = new File(getDataFolder(), "actions/shield_bash.yml");
-        saveResource(dataPath.relativize(sweepFile.toPath()).toString(), false);
-        saveResource(dataPath.relativize(bashFile.toPath()).toString(), false);
-        saveResource(dataPath.relativize(shieldBashFile.toPath()).toString(), false);
-        sweep = loadAction(sweepFile, SweepAction.class);
-        bash = loadAction(bashFile, BashAction.class);
-        shieldBash = loadAction(shieldBashFile, ShieldBashAction.class);
+        sweep = loadAction("actions/sweep.yml", SweepAction.class);
+        bash = loadAction("actions/bash.yml", BashAction.class);
+        shieldBash = loadAction("actions/shield_bash.yml", ShieldBashAction.class);
         actions.addAll(Arrays.asList(
                 shieldBash,
+                loadAction("actions/swing.yml", SwingAction.class),
                 sweep,
                 bash,
                 new StabAction()
@@ -376,7 +373,24 @@ public final class CombatMain extends JavaPlugin implements Listener {
         }
     }
 
-    public <V extends IAction> V loadAction(File file, Class<V> clazz) {
+    public <V extends IAction> V loadAction(String fileName, Class<V> clazz) {
+        File file = new File(getDataFolder(), fileName);
+        if (!file.exists()) {
+            try {
+                if (getClassLoader().getResource(fileName) == null) {
+                    if (!(file.getParentFile().exists() || file.getParentFile().mkdirs()) && !file.createNewFile()) {
+                        throw new IllegalStateException("could not load or create: " + file);
+                    }
+                } else {
+                    try (InputStream resource = getResource(fileName); FileOutputStream write = new FileOutputStream(file)) {
+                        assert resource != null;
+                        write.write(resource.readAllBytes());
+                    }
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
         try {
             return mapable.fromMap(configToMap(YamlConfiguration.loadConfiguration(file)), clazz);
         } catch (ReflectiveOperationException e) {

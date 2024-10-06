@@ -163,6 +163,13 @@ public class CombatPlayerData {
         return this.positionOverride == null ? new Vector3d(this.player.getX(), this.player.getY(), this.player.getZ()) : this.positionOverride;
     }
 
+    public Location latestPosBukkit() {
+        Location loc = fromJoml(latestPos().add(0, player.getEyeHeight(), 0)).toLocation(player.getWorld()).add(posDelta());
+        loc.setYaw(player.getYaw());
+        loc.setPitch(player.getPitch());
+        return loc;
+    }
+
     public long getCooldown(boolean main) {
         return (main ? this.attackDelayLeft.getFirst() : this.attackDelayLeft.getSecond());
     }

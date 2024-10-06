@@ -2,7 +2,6 @@ package comfortable_andy.combat.util;
 
 import comfortable_andy.combat.CombatMain;
 import comfortable_andy.combat.CombatPlayerData;
-import comfortable_andy.combat.handler.OrientedBoxHandler;
 import io.papermc.paper.configuration.WorldConfiguration;
 import io.papermc.paper.event.entity.EntityKnockbackEvent;
 import net.kyori.adventure.key.Key;
@@ -44,8 +43,8 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import static comfortable_andy.combat.util.VecUtil.fromJoml;
@@ -65,13 +64,16 @@ public class PlayerUtil {
         }
     }
 
-    public static void doSweep(Player player, Quaterniond start, Vector3d attack, int steps, boolean isAttack, double speedMod, double actionDamageMod, long ticksLeft, CombatPlayerData data) {
+    public static AttackInfo computeAttackInfo(CombatPlayerData data,
+                                               boolean isAttack,
+                                               double damageModifier,
+                                               long ticksLeft) {
+        Player player = data.getPlayer();
         final EquipmentSlot slot = isAttack ? EquipmentSlot.HAND : EquipmentSlot.OFF_HAND;
         final double cd = getCd(player, slot);
-        final int ticks = ceil(cd * speedMod);
+        final int ticks = ceil(cd);
         final ItemStack item = player.getInventory().getItem(slot);
         final double strengthScale = Mth.clamp((ticks - ticksLeft + 0.5) / ticks, 0, 1);
-        final AtomicBoolean sentStrongKnockBack = new AtomicBoolean();
         final double knockBack = getKnockBack(player, slot) + (strengthScale > 0.9 && player.isSprinting() ? 1 : 0);
         final ServerPlayer playerHandle = ((CraftPlayer) player).getHandle();
         final double initialDamage;
@@ -80,48 +82,54 @@ public class PlayerUtil {
         } catch (ReflectiveOperationException e) {
             throw new RuntimeException(e);
         }
-        final double actionModdedDamage = initialDamage * actionDamageMod;
+        final double actionModdedDamage = initialDamage * damageModifier;
+        return new AttackInfo(data, item, slot, ticks, strengthScale, knockBack, actionModdedDamage);
+    }
+
+    public static void staticSweep(Quaterniond start, Vector3d eulerRotatePerStep, int steps, AttackInfo info, double speedMod) {
+        final AtomicBoolean sentStrongKnockBack = new AtomicBoolean();
+        final int ticksPerStep = steps <= 1 ? 1 : ceil(info.cdTicks() * speedMod / (steps + 0d));
+        final CombatPlayerData data = info.playerData();
+        boolean isAttack = info.slot() == EquipmentSlot.HAND;
+        data.setCooldown(isAttack, info.cdTicks());
+        data.setNoAttack(isAttack, steps <= 1 ? 0 : ceil(info.cdTicks() * speedMod));
         if (data.getOptions().compensateCameraMovement()) {
             Vector2f delta = data.averageCameraAngleDelta();
             start.mul(new Quaterniond().rotateX(-Math.toRadians(delta.x)).rotateY(Math.toRadians(delta.y)));
         }
         data.resetCameraDelta();
-
-        final int ticksPerStep = steps <= 1 ? 1 : ceil(ticks / (steps + 0d));
-        data.setNoAttack(isAttack, steps <= 1 ? 0 : ticks);
-
+        final Player player = data.getPlayer();
         PlayerUtil.sweep(
-                player,
                 () -> fromJoml(data.latestPos().add(0, player.getEyeHeight(), 0)).toLocation(player.getWorld()).add(data.posDelta()),
                 PlayerUtil.getReach(player),
-                (float) strengthScale,
+                (float) info.strengthScale(),
                 start,
-                attack,
+                eulerRotatePerStep,
                 steps,
                 ticksPerStep,
-                (e, mtv) -> player.getInventory().setItem(slot, handleVanillaLikeAttack(
+                (e, mtv) -> player.getInventory().setItem(info.slot(), handleVanillaLikeAttack(
                         player,
                         e,
-                        item,
+                        info.item(),
                         mtv,
-                        knockBack,
-                        actionModdedDamage,
-                        strengthScale,
+                        info.unModdedKnockback(),
+                        info.unEnchantedDamage(),
+                        info.strengthScale(),
                         sentStrongKnockBack
                 )),
-                strengthScale > 0.9
+                info.strengthScale() > 0.9
         );
     }
 
     @SuppressWarnings({"UnstableApiUsage", "deprecation"})
     public static ItemStack handleVanillaLikeAttack(Player player,
-                                               Entity target,
-                                               ItemStack item,
-                                               Vector knockBackDir,
-                                               double knockBack,
-                                               double unModdedDamage,
-                                               double strengthScale,
-                                               AtomicBoolean sentStrongKnockBack) {
+                                                    Entity target,
+                                                    ItemStack item,
+                                                    Vector knockBackDir,
+                                                    double unModdedKnockBack,
+                                                    double unModdedDamage,
+                                                    double strengthScale,
+                                                    AtomicBoolean sentStrongKnockBack) {
         if (!canAttack(player, target)) return item;
         final var targetHandle = ((CraftEntity) target).getHandle();
         final var playerHandle = ((CraftPlayer) player).getHandle();
@@ -143,15 +151,15 @@ public class PlayerUtil {
                 .withDirectEntity(player)
                 .build();
         final var sourceHandle = ((CraftDamageSource) source).getHandle();
-        knockBack = EnchantmentHelper.modifyKnockback(level, nmsStack, targetHandle, sourceHandle, (float) knockBack);
+        unModdedKnockBack = EnchantmentHelper.modifyKnockback(level, nmsStack, targetHandle, sourceHandle, (float) unModdedKnockBack);
 
-        if (knockBack > 0 && target instanceof LivingEntity living) {
+        if (unModdedKnockBack > 0 && target instanceof LivingEntity living) {
             playerHandle.setDeltaMovement(playerHandle.getDeltaMovement().multiply(0.6, 1, 0.6));
             if (!paperConfig.misc.disableSprintInterruptionOnAttack) {
                 player.setSprinting(false);
             }
             ((CraftLivingEntity) living).getHandle().knockback(
-                    knockBack,
+                    unModdedKnockBack,
                     -knockBackDir.getX(),
                     -knockBackDir.getZ(),
                     playerHandle,
@@ -252,11 +260,67 @@ public class PlayerUtil {
      * @param delta    this added to {@code start}
      * @param steps    how many steps
      */
-    public static void sweep(Object owner, Supplier<Location> supplier, float reach, float size, Quaterniond start, Vector3d delta, int steps, int ticksPerStep, BiConsumer<Entity, Vector> callback, boolean collide) {
+    public static void sweep(Supplier<Location> supplier,
+                             float reach,
+                             float size,
+                             Quaterniond start,
+                             Vector3d delta,
+                             int steps,
+                             int ticksPerStep,
+                             BiConsumer<Entity, Vector> callback,
+                             boolean collide) {
         Location loc = supplier.get().clone();
 
+        final OrientedBox attackBox = makeAttackBox(reach, size, start, loc);
+
+        final Vector3d rawStep = delta.mul(steps <= 1 ? 1 : 1 / (steps - 1d));
+        final Quaterniond step = rotateLocal(new Quaterniond(), rawStep, attackBox.getAxis());
+
+        if (steps <= 1) attackBox.rotateBy(step);
+        doBoxStuff(attackBox, supplier, callback, box -> box.rotateBy(step), reach, steps, ticksPerStep, collide);
+    }
+
+    public static void doBoxStuff(OrientedBox attackBox,
+                                  Supplier<Location> locSupplier,
+                                  BiConsumer<Entity, Vector> hitCallback,
+                                  Consumer<OrientedBox> rotConsumer,
+                                  float reach,
+                                  int steps,
+                                  int ticksPerStep,
+                                  boolean collideWithOthers) {
+        final Map<Entity, OrientedBox> possible = new ConcurrentHashMap<>();
+        final World world = locSupplier.get().getWorld();
+        final AtomicInteger ticker = new AtomicInteger(0);
+
+        CombatMain.getInstance().boxHandler.addBox(attackBox, h -> {
+            if (ticker.getAndIncrement() / ticksPerStep > steps) return true;
+            if (ticker.get() % ticksPerStep != 0) return false;
+            final Location curLoc = locSupplier.get();
+            if (collideWithOthers && h.checkCollided()) {
+                world.playSound(curLoc, Sound.BLOCK_ANVIL_PLACE, 1, 1);
+                return true;
+            }
+            possible.forEach((e, box) ->
+                    box.moveBy(e.getBoundingBox().getCenter().subtract(box.getCenter()))
+            );
+            possible.putAll(collectNearby(reach, curLoc, possible.keySet()));
+            final Vector dir = curLoc.getDirection();
+
+            for (Map.Entry<Entity, OrientedBox> entry : possible.entrySet()) {
+                final List<Vector> directions = entry.getValue().collides(attackBox, Comparator.comparingDouble(dir::dot)).reversed();
+                if (directions.isEmpty()) continue;
+                if (dir.dot(directions.getFirst()) <= 0) continue;
+                hitCallback.accept(entry.getKey(), directions.getFirst());
+            }
+            attackBox.clone().display(world, p -> CombatMain.getInstance().getData(p).getOptions().boxDisplayParticles());
+            rotConsumer.accept(attackBox);
+            return false;
+        });
+    }
+
+    public static OrientedBox makeAttackBox(float reach, float size, Quaterniond start, Location loc) {
         final float halfSize = size / 2;
-        final OrientedBox attackBox = new OrientedBox(
+        return new OrientedBox(
                 BoundingBox.of(
                         loc.clone()
                                 .add(+halfSize, +halfSize, 0),
@@ -265,60 +329,6 @@ public class PlayerUtil {
                 ))
                 .setCenter(loc.toVector())
                 .rotateBy(start);
-
-        final Vector3d rawStep = delta.mul(steps <= 1 ? 1 : 1 / (steps - 1d));
-        final Quaterniond step = rotateLocal(new Quaterniond(), rawStep, attackBox.getAxis());
-
-        if (steps <= 1) attackBox.rotateBy(step);
-        final Map<Entity, OrientedBox> possible = new ConcurrentHashMap<>();
-        final World world = loc.getWorld();
-        final AtomicReference<Vector> direction = new AtomicReference<>();
-        final AtomicInteger ticker = new AtomicInteger(0);
-
-        CombatMain.getInstance().boxHandler.addBox(
-                attackBox,
-                OrientedBoxHandler.BoxInfo.<Entity>builder()
-                        .owner(owner)
-                        .boxSupplier(() -> {
-                            possible.forEach((e, box) ->
-                                    box.moveBy(
-                                            e.getBoundingBox()
-                                                    .getCenter()
-                                                    .subtract(box.getCenter())
-                                    )
-                            );
-                            return possible;
-                        })
-                        .collideCallback(((damageable, vector) -> {
-                            if (direction.get().dot(vector) <= 0) return;
-                            callback.accept(damageable, vector);
-                        }))
-                        .mtvComparator(((Comparator<Vector>) (a, b) -> {
-                            final Vector dir = direction.get();
-                            return Double.compare(dir.dot(a), dir.dot(b));
-                        }).reversed())
-                        .tickCheck(left -> {
-                            if (ticker.getAndIncrement() % ticksPerStep != 0) return false;
-                            final Location curLoc = supplier.get();
-                            possible.putAll(collectNearby(reach, curLoc, possible.keySet()));
-                            direction.set(curLoc.getDirection());
-                            return true;
-                        })
-                        .postTickCallback(() -> {
-                            attackBox.clone().display(world, p -> CombatMain.getInstance().getData(p).getOptions().boxDisplayParticles());
-                            attackBox.rotateBy(step);
-                        })
-                        .collidesWithOthers(collide)
-                        .collidedWithOther((box, info) -> {
-                            if (owner != info.getOwner()) {
-                                world.playSound(loc, Sound.BLOCK_ANVIL_PLACE, 1, 1);
-                                return true;
-                            }
-                            return false;
-                        })
-                        .ticks(Math.max(1, steps))
-                        .build()
-        );
     }
 
     @NotNull

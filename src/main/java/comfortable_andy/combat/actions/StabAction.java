@@ -1,6 +1,7 @@
 package comfortable_andy.combat.actions;
 
 import comfortable_andy.combat.CombatPlayerData;
+import comfortable_andy.combat.util.AttackInfo;
 import comfortable_andy.combat.util.PlayerUtil;
 import lombok.ToString;
 import org.bukkit.entity.Player;
@@ -16,17 +17,13 @@ public class StabAction implements IAction {
     public @NotNull ActionResult tryActivate(Player player, CombatPlayerData data, ActionType type) {
         if (type == ActionType.DOUBLE_SNEAK) return ActionResult.NONE;
         boolean isAttack = type == ActionType.ATTACK;
-        PlayerUtil.doSweep(
-                player,
-                fromDir(data.latestCameraDir()),
-                new Vector3d(),
-                1,
+        AttackInfo info = PlayerUtil.computeAttackInfo(
+                data,
                 isAttack,
                 1,
-                1,
-                data.getCooldown(isAttack),
-                data
+                data.getCooldown(isAttack)
         );
+        PlayerUtil.staticSweep(fromDir(data.latestCameraDir()), new Vector3d(), 1, info, 1);
         return ActionResult.ACTIVATED;
     }
 }

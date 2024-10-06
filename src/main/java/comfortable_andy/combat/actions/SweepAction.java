@@ -1,6 +1,7 @@
 package comfortable_andy.combat.actions;
 
 import comfortable_andy.combat.CombatPlayerData;
+import comfortable_andy.combat.util.AttackInfo;
 import comfortable_andy.combat.util.PlayerUtil;
 import lombok.ToString;
 import org.bukkit.Sound;
@@ -39,16 +40,18 @@ public class SweepAction extends SweepingAction {
             attack.negate();
         }
 
-        PlayerUtil.doSweep(
-                player,
+        AttackInfo info = PlayerUtil.computeAttackInfo(
+                data,
+                isAttack,
+                damageMultiplierPerStep,
+                data.getCooldown(isAttack)
+        );
+        PlayerUtil.staticSweep(
                 fromDir(data.latestCameraDir()).mul(new Quaterniond().rotateY(Math.toRadians(windBack.y))),
                 attack,
                 steps,
-                isAttack,
-                speedMultiplier,
-                damageMultiplierPerStep,
-                data.getCooldown(isAttack),
-                data
+                info,
+                speedMultiplier
         );
         player.getWorld().playSound(player.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, 1, 1);
         ((CraftPlayer) player).getHandle().sweepAttack();

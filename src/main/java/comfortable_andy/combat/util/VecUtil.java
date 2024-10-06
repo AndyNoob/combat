@@ -25,16 +25,16 @@ public class VecUtil {
         return new Vector(v.x, v.y, v.z);
     }
 
-    public static Quaterniond fromDir(float rotY, float rotX) {
+    public static Quaterniond fromDir(float rotX, float rotY) {
         return new Quaterniond().rotationXYZ(-Math.toRadians(rotX), Math.toRadians(rotY), 0).invert();
     }
 
     public static Quaterniond fromDir(Vector2f v) {
-        return fromDir(v.y, v.x);
+        return fromDir(v.x, v.y);
     }
 
     public static Quaterniond fromDir(Location location) {
-        return fromDir(location.getYaw(), location.getPitch());
+        return fromDir(location.getPitch(), location.getYaw());
     }
 
     public static Quaterniond rotateLocal(Quaterniond q, Vector3d v, Matrix3d axes) {

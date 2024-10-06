@@ -1,6 +1,7 @@
 package comfortable_andy.combat.actions;
 
 import comfortable_andy.combat.CombatPlayerData;
+import comfortable_andy.combat.util.AttackInfo;
 import comfortable_andy.combat.util.PlayerUtil;
 import lombok.ToString;
 import org.bukkit.Sound;
@@ -24,16 +25,18 @@ public class BashAction extends SweepingAction {
 
     @Override
     public void run(Player player, CombatPlayerData data, Vector2f delta, boolean isAttack) {
-        PlayerUtil.doSweep(
-                player,
+        AttackInfo info = PlayerUtil.computeAttackInfo(
+                data,
+                isAttack,
+                damageMultiplierPerStep,
+                data.getCooldown(isAttack)
+        );
+        PlayerUtil.staticSweep(
                 fromDir(data.latestCameraDir()).mul(new Quaterniond().rotateX(-Math.toRadians(windBackRotX))),
                 new Vector3d(attackRotX, 0, 0),
                 steps,
-                isAttack,
-                speedMultiplier,
-                damageMultiplierPerStep,
-                data.getCooldown(isAttack),
-                data
+                info,
+                speedMultiplier
         );
         player.getWorld().playSound(player.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, 1, 1);
     }
