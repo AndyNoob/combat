@@ -2,7 +2,7 @@ package comfortable_andy.combat.util;
 
 import comfortable_andy.combat.CombatMain;
 import lombok.Getter;
-import org.apache.commons.lang.math.DoubleRange;
+import org.apache.commons.lang3.Range;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.Particle;
@@ -92,7 +92,7 @@ public class OrientedBox implements Cloneable {
         return this;
     }
 
-    private DoubleRange project(Vector axis) {
+    private Range<Double> project(Vector axis) {
         double min = Double.POSITIVE_INFINITY;
         double max = Double.NEGATIVE_INFINITY;
         for (Vector vertex : vertices) {
@@ -100,7 +100,7 @@ public class OrientedBox implements Cloneable {
             if (d > max) max = d;
             if (d < min) min = d;
         }
-        return new DoubleRange(min, max);
+        return Range.of(min, max);
     }
 
     @NotNull
@@ -108,16 +108,16 @@ public class OrientedBox implements Cloneable {
         final List<Vector> options = new ArrayList<>();
         for (int i = 0; i < 6; i++) {
             final Vector axis = fromJoml((i <= 2 ? this : other).axis.getColumn(i % 3, new Vector3d()));
-            final DoubleRange thisRange = this.project(axis);
-            final DoubleRange otherRange = other.project(axis);
+            final Range<Double> thisRange = this.project(axis);
+            final Range<Double> otherRange = other.project(axis);
 
-            if (!thisRange.overlapsRange(otherRange)) return new ArrayList<>();
+            if (!thisRange.isOverlappedBy(otherRange)) return new ArrayList<>();
 
             final List<Double> vals = Arrays.asList(
-                    thisRange.getMinimumDouble(),
-                    thisRange.getMaximumDouble(),
-                    otherRange.getMinimumDouble(),
-                    otherRange.getMaximumDouble()
+                    thisRange.getMinimum(),
+                    thisRange.getMaximum(),
+                    otherRange.getMinimum(),
+                    otherRange.getMaximum()
             );
 
             vals.sort(Double::compare);
@@ -132,7 +132,7 @@ public class OrientedBox implements Cloneable {
                 multi += Math.copySign(1, multi) * Math.min(Math.abs(vals.get(3) - vals.get(2)), Math.abs(vals.get(1) - vals.get(0)));
             }
 
-            if (vals.get(0) == otherRange.getMinimumDouble()) {
+            if (vals.get(0) == otherRange.getMinimum()) {
                 CombatMain.getInstance().debug("negating");
                 multi *= -1;
             }

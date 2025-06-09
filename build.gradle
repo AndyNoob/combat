@@ -1,9 +1,7 @@
-import io.papermc.paperweight.userdev.ReobfArtifactConfiguration
-
 plugins {
     id 'java'
-    id 'io.papermc.paperweight.userdev' version '1.7.1'
-    id 'xyz.jpenilla.run-paper' version '2.3.0'
+    id 'io.papermc.paperweight.userdev' version '2.0.0-beta.17'
+    id 'xyz.jpenilla.run-paper' version '2.3.1'
     id 'com.github.johnrengelman.shadow' version '8.1.1'
     id 'org.ajoberstar.grgit' version '5.2.2'
 }
@@ -13,6 +11,7 @@ version = '1.0.0+' + versionMetadata()
 
 repositories {
     mavenCentral()
+    mavenLocal()
     maven {
         name = "papermc-repo"
         url = "https://repo.papermc.io/repository/maven-public/"
@@ -21,10 +20,10 @@ repositories {
         name = "sonatype"
         url = "https://oss.sonatype.org/content/groups/public/"
     }
-    maven {
-        name = "jitback.io"
-        url = "https://jitpack.io"
-    }
+//    maven {
+//        name = "jitback.io"
+//        url = "https://jitpack.io"
+//    }
     maven {
         url = "https://maven.citizensnpcs.co/repo/"
     }
@@ -33,18 +32,15 @@ repositories {
 dependencies {
     compileOnly 'org.projectlombok:lombok:1.18.32'
     annotationProcessor 'org.projectlombok:lombok:1.18.32'
-    paperweight.paperDevBundle('1.21-R0.1-SNAPSHOT')
-    implementation 'com.github.AndyNoob:Mapable:v3.6.0'
+    paperweight.paperDevBundle('1.21.5-R0.1-SNAPSHOT')
+//    implementation 'com.github.AndyNoob:Mapable:v3.6.0'
+    implementation 'me.comfortable_andy:Mapable:v3.6.0'
     compileOnly('org.mcmonkey:sentinel:2.9.1-SNAPSHOT') {
         exclude group: "*"
     }
     compileOnly('net.citizensnpcs:citizens-main:2.0.35-SNAPSHOT') {
         exclude group: "*"
     }
-}
-
-paperweight {
-    reobfArtifactConfiguration.set(ReobfArtifactConfiguration.getREOBF_PRODUCTION())
 }
 
 def targetJavaVersion = 21

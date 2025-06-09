@@ -160,7 +160,8 @@ public class PlayerUtil {
                         sentStrongKnockBack.set(true);
                     }
                     final double hpBefore = e instanceof LivingEntity le ? le.getHealth() : -1;
-                    final boolean hurt = entityHandle.hurt(
+                    final boolean hurt = entityHandle.hurtServer(
+                            level,
                             sourceHandle,
                             (float) finalFinalDamage
                     );
@@ -183,7 +184,7 @@ public class PlayerUtil {
                                 (net.minecraft.world.entity.LivingEntity) entityHandle,
                                 playerHandle
                         );
-
+                    player.getInventory().setItem(slot, CraftItemStack.asCraftMirror(nmsStack));
                     if (!(hurt)) {
                         world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_NODAMAGE, 1, 1);
                         return;
@@ -317,7 +318,7 @@ public class PlayerUtil {
     }
 
     public static float getReach(Player player) {
-        return getValueFrom(player.getAttribute(Attribute.PLAYER_ENTITY_INTERACTION_RANGE));
+        return getValueFrom(player.getAttribute(Attribute.ENTITY_INTERACTION_RANGE));
     }
 
     private static float getValueFrom(AttributeInstance instance) {
@@ -342,15 +343,15 @@ public class PlayerUtil {
     }
 
     public static double getCd(Player player, EquipmentSlot slot) {
-        return 1 / (getItemLess(player, Attribute.GENERIC_ATTACK_SPEED, Item.BASE_ATTACK_SPEED_ID.toString()) + ItemUtil.getAttribute(player.getInventory().getItem(slot), EquipmentSlot.HAND, Attribute.GENERIC_ATTACK_SPEED)) * 20;
+        return 1 / (getItemLess(player, Attribute.ATTACK_SPEED, Item.BASE_ATTACK_SPEED_ID.toString()) + ItemUtil.getAttribute(player.getInventory().getItem(slot), EquipmentSlot.HAND, Attribute.ATTACK_SPEED)) * 20;
     }
 
     public static double getDmg(Player player, EquipmentSlot slot) {
-        return getItemLess(player, Attribute.GENERIC_ATTACK_DAMAGE, Item.BASE_ATTACK_DAMAGE_ID.toString()) + ItemUtil.getAttribute(player.getInventory().getItem(slot), EquipmentSlot.HAND, Attribute.GENERIC_ATTACK_DAMAGE);
+        return getItemLess(player, Attribute.ATTACK_DAMAGE, Item.BASE_ATTACK_DAMAGE_ID.toString()) + ItemUtil.getAttribute(player.getInventory().getItem(slot), EquipmentSlot.HAND, Attribute.ATTACK_DAMAGE);
     }
 
     public static double getKnockBack(Player player, EquipmentSlot slot) {
-        return getItemLess(player, Attribute.GENERIC_ATTACK_KNOCKBACK) + ItemUtil.getAttribute(player.getInventory().getItem(slot), EquipmentSlot.HAND, Attribute.GENERIC_ATTACK_KNOCKBACK);
+        return getItemLess(player, Attribute.ATTACK_KNOCKBACK) + ItemUtil.getAttribute(player.getInventory().getItem(slot), EquipmentSlot.HAND, Attribute.ATTACK_KNOCKBACK);
     }
 
     public static boolean canAttack(Player attacker, Entity attacked) {

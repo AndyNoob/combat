@@ -4,6 +4,8 @@ import comfortable_andy.combat.CombatPlayerData;
 import comfortable_andy.combat.util.ItemUtil;
 import comfortable_andy.combat.util.PlayerUtil;
 import io.papermc.paper.event.entity.EntityKnockbackEvent;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.InteractionHand;
 import org.bukkit.Material;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.craftbukkit.entity.CraftLivingEntity;
@@ -38,9 +40,9 @@ public class ShieldBashAction implements IAction {
         if (!enabled) return ActionResult.NONE;
         if (!player.isBlocking()) return ActionResult.NONE;
         final var playerHandle = ((CraftPlayer) player).getHandle();
-        playerHandle.disableShield(null);
         final ItemStack item = player.getInventory().getItemInMainHand().getType() == Material.SHIELD ? player.getInventory().getItemInMainHand() : player.getInventory().getItemInOffHand();
-        final double damage = ItemUtil.getAttribute(item, EquipmentSlot.HAND, Attribute.GENERIC_ATTACK_DAMAGE);
+        player.setCooldown(item, 5 * 20);
+        final double damage = ItemUtil.getAttribute(item, EquipmentSlot.HAND, Attribute.ATTACK_DAMAGE);
         final AtomicBoolean launched = new AtomicBoolean();
         PlayerUtil.sweep(
                 player,
