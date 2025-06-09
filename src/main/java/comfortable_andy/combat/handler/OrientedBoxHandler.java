@@ -57,6 +57,10 @@ public class OrientedBoxHandler extends BukkitRunnable {
         boxes.put(box, info);
     }
 
+    public boolean isChecking(Object owner) {
+        return boxes.values().stream().anyMatch(i -> i.owner == owner);
+    }
+
     @Builder
     @Data
     @AllArgsConstructor
