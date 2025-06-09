@@ -8,9 +8,7 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import comfortable_andy.combat.actions.*;
 import comfortable_andy.combat.compat.CombatSentinelIntegration;
 import comfortable_andy.combat.handler.OrientedBoxHandler;
-import comfortable_andy.combat.util.OrientedBox;
 import comfortable_andy.combat.util.PlayerUtil;
-import comfortable_andy.combat.util.VecUtil;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import io.papermc.paper.command.brigadier.argument.ArgumentTypes;
@@ -32,16 +30,14 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockDamageAbortEvent;
 import org.bukkit.event.block.BlockDamageEvent;
-import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 import org.bukkit.event.player.PlayerToggleSneakEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
@@ -58,7 +54,6 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static comfortable_andy.combat.util.PlayerUtil.getCd;
-import static comfortable_andy.combat.util.PlayerUtil.getReach;
 import static org.bukkit.util.NumberConversions.ceil;
 
 public final class CombatMain extends JavaPlugin implements Listener {
@@ -233,6 +228,11 @@ public final class CombatMain extends JavaPlugin implements Listener {
         interactBlacklist.remove(event.getPlayer());
     }
 
+    @EventHandler(ignoreCancelled = true)
+    public void onSwap(PlayerSwapHandItemsEvent event) {
+        if (boxHandler.isChecking(event.getPlayer())) event.setCancelled(true);
+    }
+
     final Map<UUID, Integer> droppedItem = new ConcurrentHashMap<>();
 
     @EventHandler
@@ -273,6 +273,7 @@ public final class CombatMain extends JavaPlugin implements Listener {
             }
         }
         if (event.getAction() == Action.LEFT_CLICK_AIR) {
+            // to allow drop item from inventory
             int tick = Bukkit.getCurrentTick();
             Bukkit.getScheduler().runTaskLater(
                     this,

@@ -184,8 +184,10 @@ public class PlayerUtil {
                                 (net.minecraft.world.entity.LivingEntity) entityHandle,
                                 playerHandle
                         );
-                    if (player.getInventory().getItem(slot).equals(item)) // prevent dropping
-                        player.getInventory().setItem(slot, CraftItemStack.asCraftMirror(nmsStack));
+                    if (player.getInventory().getItem(slot).equals(item)) { // prevent dropping
+                        CraftItemStack mirror = CraftItemStack.asCraftMirror(nmsStack);
+                        player.getInventory().setItem(slot, mirror);
+                    }
                     if (!(hurt)) {
                         world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_NODAMAGE, 1, 1);
                         return;
