@@ -273,7 +273,7 @@ public class PlayerUtil {
                             return possible;
                         })
                         .collideCallback(((damageable, vector) -> {
-                            if (direction.get().dot(vector) <= 0) return;
+//                            if (direction.get().dot(vector) <= 0) return;
                             callback.accept(damageable, vector);
                         }))
                         .mtvComparator(((Comparator<Vector>) (a, b) -> {
@@ -283,7 +283,7 @@ public class PlayerUtil {
                         .tickCheck(left -> {
                             if (ticker.getAndIncrement() % ticksPerStep != 0) return false;
                             final Location curLoc = supplier.get();
-                            possible.putAll(collectNearby(reach, curLoc, possible.keySet()));
+                            possible.putAll(collectNearby(owner, reach, curLoc, possible.keySet()));
                             direction.set(curLoc.getDirection());
                             return true;
                         })
@@ -306,6 +306,7 @@ public class PlayerUtil {
 
     @NotNull
     private static Map<Entity, OrientedBox> collectNearby(
+            Object owner,
             float reach,
             Location curLoc,
             Collection<Entity> excluding
@@ -313,7 +314,7 @@ public class PlayerUtil {
         return curLoc
                 .getNearbyEntitiesByType(Entity.class, reach)
                 .stream()
-                .filter(e -> !excluding.contains(e))
+                .filter(e -> !excluding.contains(e) && e != owner)
                 .collect(HashMap::new, (m, d) -> m.put(d, new OrientedBox(d.getBoundingBox())), HashMap::putAll);
     }
 

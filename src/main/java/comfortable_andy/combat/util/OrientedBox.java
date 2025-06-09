@@ -132,7 +132,7 @@ public class OrientedBox implements Cloneable {
                 multi += Math.copySign(1, multi) * Math.min(Math.abs(vals.get(3) - vals.get(2)), Math.abs(vals.get(1) - vals.get(0)));
             }
 
-            if (vals.get(0) == otherRange.getMinimum()) {
+            if (Objects.equals(vals.get(0), otherRange.getMinimum())) {
                 CombatMain.getInstance().debug("negating");
                 multi *= -1;
             }
