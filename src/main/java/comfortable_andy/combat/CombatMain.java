@@ -39,6 +39,7 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockDamageAbortEvent;
 import org.bukkit.event.block.BlockDamageEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerToggleSneakEvent;
@@ -232,7 +233,15 @@ public final class CombatMain extends JavaPlugin implements Listener {
         interactBlacklist.remove(event.getPlayer());
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST)
+    final Map<UUID, Integer> droppedItem = new ConcurrentHashMap<>();
+
+    @EventHandler
+    public void onDropItem(PlayerDropItemEvent event) {
+        droppedItem.put(event.getPlayer().getUniqueId(), Bukkit.getCurrentTick());
+        if (boxHandler.isChecking(event.getPlayer())) event.setCancelled(true);
+    }
+
+    @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
         if (!enabled) return;
         if (event.getAction().isLeftClick() && interactBlacklist.contains(event.getPlayer())) {
@@ -263,8 +272,24 @@ public final class CombatMain extends JavaPlugin implements Listener {
                 return;
             }
         }
-        final boolean cancel = runAction(event.getPlayer(), event.getAction().isLeftClick() ? IAction.ActionType.ATTACK : IAction.ActionType.INTERACT, event.getClickedBlock() != null);
-        if (cancel && event.getAction() != Action.LEFT_CLICK_BLOCK) event.setCancelled(true);
+        if (event.getAction() == Action.LEFT_CLICK_AIR) {
+            int tick = Bukkit.getCurrentTick();
+            Bukkit.getScheduler().runTaskLater(
+                    this,
+                    () -> {
+                        if (droppedItem.remove(event.getPlayer().getUniqueId(), tick)) return;
+                        runAction(
+                                event.getPlayer(),
+                                IAction.ActionType.ATTACK,
+                                false
+                        );
+                    },
+                    1
+            );
+        } else {
+            final boolean cancel = runAction(event.getPlayer(), event.getAction().isLeftClick() ? IAction.ActionType.ATTACK : IAction.ActionType.INTERACT, event.getClickedBlock() != null);
+            if (cancel && event.getAction() != Action.LEFT_CLICK_BLOCK) event.setCancelled(true);
+        }
     }
 
     public boolean runAction(Player player, IAction.ActionType actionType, boolean clickedBlock) {
@@ -314,10 +339,6 @@ public final class CombatMain extends JavaPlugin implements Listener {
         runAction(player, type, false);
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    public void onDropItem(PlayerDropItemEvent event) {
-        if (boxHandler.isChecking(event.getPlayer())) event.setCancelled(true);
-    }
 
     private final Map<Player, Long> lastUnSneak = new HashMap<>();
 
