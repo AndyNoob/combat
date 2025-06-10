@@ -7,6 +7,7 @@ import comfortable_andy.combat.util.PlayerUtil;
 import lombok.Data;
 import net.citizensnpcs.api.npc.NPC;
 import org.bukkit.Location;
+import org.bukkit.Particle;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -76,32 +77,45 @@ public class CombatSentinelIntegration extends SentinelIntegration {
         final var left = attackedToNpc.clone().rotateAroundY(Math.toRadians(90)).setY(0).normalize();
         final var normalizedAverage = average.clone().normalize();
         final double direction = attackedToNpc.dot(normalizedAverage);
-        final double leftness = left.dot(normalizedAverage);
+        final double leftDot = left.dot(normalizedAverage);
+
+//        Location loc = npc.getNavigator().getTargetAsLocation();
+//        if (loc != null) npc.getEntity().getWorld().spawnParticle(Particle.FLAME, loc, 1, 0, 0, 0, 0);
+
         CombatPlayerData combatData = CombatMain.getInstance().getData(player);
         combatData.getOptions().compensateCameraMovement(false);
+        /*if (--data.strifeTick <= 0 && ThreadLocalRandom.current().nextBoolean()) {
+            System.out.println("old dir " + data.strifeDir);
+            data.strifeDir *= -1;
+            data.strifeTick = 20;
+            System.out.println("strife with dir " + data.strifeDir);
+        } else if (data.strifeTick > 0) {
+            System.out.println("strife progress (dir " + data.strifeDir + ")");
+            npc.getNavigator().cancelNavigation();
+            Location strifeTarget = player.getLocation().add(left.clone().multiply(data.strifeDir).multiply(3.5));
+            st.pathTo(strifeTarget);
+            npc.getEntity().getWorld().spawnParticle(Particle.END_ROD, strifeTarget, 1, 0, 0, 0, 0);
+        }*/
+
         st.faceLocation(ent.getEyeLocation());
         st.attackHelper.rechase();
+        double reach = Math.max(PlayerUtil.getReach(ent), st.reach);
         if (player.getEyeLocation()
-                .distanceSquared(ent.getEyeLocation()) > st.reach * st.reach) {
+                .distanceSquared(ent.getEyeLocation()) > reach * reach) {
             if (!st.rangedChase) {
                 npc.getNavigator().cancelNavigation();
             }
             // allow long range
             return false;
         } else if (combatData.getNoAttack(true) > 0) {
-            return true;
+            return false;
         }
 
-        final double sign = Math.copySign(1, leftness);
-
-        if (ThreadLocalRandom.current().nextBoolean()) {
-            // strife
-            st.pathTo(player.getLocation().add(left.clone().multiply(-sign).multiply(3.5)));
-        }
+        final double sign = Math.copySign(1, leftDot);
 
         if (ThreadLocalRandom.current().nextDouble() > direction) {
             Vector2f entering;
-            if (Math.abs(leftness) > 0.75) {
+            if (Math.abs(leftDot) > 0.75) {
                 // do sweep
                 entering = new Vector2f(0, (float) (90 * -sign));
             } else {
@@ -124,7 +138,7 @@ public class CombatSentinelIntegration extends SentinelIntegration {
             npc.getNavigator().setTarget(ent, true);
             combatData.setNoAttack(true, Math.round(combatData.getNoAttack(true) + deduction));
         }
-        return true;
+        return false;
     }
 
     @Data

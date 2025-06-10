@@ -14,6 +14,7 @@ import net.minecraft.world.entity.projectile.ProjectileDeflection;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import org.bukkit.*;
+import org.bukkit.attribute.Attributable;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
@@ -321,7 +322,7 @@ public class PlayerUtil {
                 .collect(HashMap::new, (m, d) -> m.put(d, new OrientedBox(d.getBoundingBox())), HashMap::putAll);
     }
 
-    public static float getReach(Player player) {
+    public static float getReach(Attributable player) {
         return getValueFrom(player.getAttribute(Attribute.ENTITY_INTERACTION_RANGE));
     }
 
