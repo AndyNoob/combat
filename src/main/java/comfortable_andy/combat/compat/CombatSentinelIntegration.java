@@ -7,14 +7,17 @@ import comfortable_andy.combat.util.PlayerUtil;
 import lombok.Data;
 import net.citizensnpcs.api.npc.NPC;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.joml.Vector2f;
 import org.mcmonkey.sentinel.SentinelIntegration;
+import org.mcmonkey.sentinel.SentinelPlugin;
 import org.mcmonkey.sentinel.SentinelTrait;
 
 import java.util.Map;
@@ -31,6 +34,7 @@ public class CombatSentinelIntegration extends SentinelIntegration {
     public static final String META_KEY = "use-combat";
 
     private final Map<SentinelTrait, TrackingData> ticking = new ConcurrentHashMap<>();
+    private final Map<SentinelTrait, StrafeData> strafing = new ConcurrentHashMap<>();
 
     public CombatSentinelIntegration() {
         new BukkitRunnable() {
@@ -41,8 +45,10 @@ public class CombatSentinelIntegration extends SentinelIntegration {
                     Map.Entry<SentinelTrait, TrackingData> entry = iterator.next();
                     SentinelTrait trait = entry.getKey();
                     NPC npc = trait.getNPC();
-                    if (trait.chasing == null) {
+                    LivingEntity chasing = trait.chasing;
+                    if (chasing == null) {
                         iterator.remove();
+                        strafing.remove(trait);
                         continue;
                     }
                     if (npc == null
@@ -50,16 +56,69 @@ public class CombatSentinelIntegration extends SentinelIntegration {
                             || !npc.hasTrait(trait.getClass())
                     ) {
                         iterator.remove();
+                        strafing.remove(trait);
                         continue;
                     }
+
+                    Location targetAsLocation = npc.getNavigator().getTargetAsLocation();
+                    /*Location loc = targetAsLocation;
+                    if (loc != null && npc.getNavigator().isNavigating())
+                        npc.getEntity().getWorld().spawnParticle(Particle.FLAME, loc, 1, 0, 0, 0, 0);*/
+
                     TrackingData data = entry.getValue();
-                    data.enterLocation(trait.chasing.getLocation());
+                    data.enterLocation(chasing.getLocation());
                     Entity entity = trait.getNPC().getEntity();
                     if (entity instanceof Player player)
                         CombatMain.getInstance().getData(player).updateDelays();
+
+                    if (trait.cTick < SentinelPlugin.instance.tickRate) {
+                        boolean macing = isPlanningAttack(chasing);
+                        if (chasing.hasActiveItem() || macing) {
+                            if (!trait.isBlocking) trait.startBlocking();
+                            trait.faceLocation(chasing.getEyeLocation());
+                        }
+                        double maceDist = chasing.getLocation()
+                                .distanceSquared(trait.getLivingEntity().getEyeLocation());
+                        if (
+                                macing
+                                && maceDist < PlayerUtil.getReach(chasing) * 2
+                                && trait.getLivingEntity() instanceof Player player
+                                && CombatMain.getInstance().getData(player).getNoAttack(true) < 1
+                        ) {
+                            trait.faceLocation(chasing.getEyeLocation());
+                            CombatMain.getInstance().runAction(player, IAction.ActionType.ATTACK, false);
+                        }
+                        /*if (trait.cTick == 1) {
+                            StrafeData strafe = strafing.computeIfAbsent(trait, k -> new StrafeData());
+                            final var left = chasing.getLocation()
+                                    .subtract(npc.getEntity().getLocation())
+                                    .toVector()
+                                    .rotateAroundY(Math.toRadians(90))
+                                    .setY(0).normalize();
+                            left.checkFinite();
+                            Location strafeLoc = chasing.getLocation()
+                                    .add(left.multiply(strafe.direction * 3));
+                            strafeLoc.setY(npc.getEntity().getY());
+                            strafe.target = strafeLoc;
+                            trait.pathingTo = strafeLoc;
+                            npc.getNavigator().setTarget(strafeLoc);
+                        }*/
+                    }
                 }
             }
         }.runTaskTimer(CombatMain.getInstance(), 0, 1);
+    }
+
+    public boolean isPlanningAttack(LivingEntity chasing) {
+        EntityEquipment equipment = chasing.getEquipment();
+        if (equipment == null) return false;
+        Material mainHand = equipment.getItemInOffHand().getType();
+        if (mainHand == Material.CROSSBOW) return true;
+        Material offHand = equipment.getItemInMainHand().getType();
+        if (offHand == Material.CROSSBOW) return true;
+        return chasing.getFallDistance() > 0
+                && (offHand == Material.MACE
+                || mainHand == Material.MACE);
     }
 
     @Override
@@ -79,23 +138,8 @@ public class CombatSentinelIntegration extends SentinelIntegration {
         final double direction = attackedToNpc.dot(normalizedAverage);
         final double leftDot = left.dot(normalizedAverage);
 
-//        Location loc = npc.getNavigator().getTargetAsLocation();
-//        if (loc != null) npc.getEntity().getWorld().spawnParticle(Particle.FLAME, loc, 1, 0, 0, 0, 0);
-
         CombatPlayerData combatData = CombatMain.getInstance().getData(player);
         combatData.getOptions().compensateCameraMovement(false);
-        /*if (--data.strifeTick <= 0 && ThreadLocalRandom.current().nextBoolean()) {
-            System.out.println("old dir " + data.strifeDir);
-            data.strifeDir *= -1;
-            data.strifeTick = 20;
-            System.out.println("strife with dir " + data.strifeDir);
-        } else if (data.strifeTick > 0) {
-            System.out.println("strife progress (dir " + data.strifeDir + ")");
-            npc.getNavigator().cancelNavigation();
-            Location strifeTarget = player.getLocation().add(left.clone().multiply(data.strifeDir).multiply(3.5));
-            st.pathTo(strifeTarget);
-            npc.getEntity().getWorld().spawnParticle(Particle.END_ROD, strifeTarget, 1, 0, 0, 0, 0);
-        }*/
 
         st.faceLocation(ent.getEyeLocation());
         st.attackHelper.rechase();
@@ -107,7 +151,8 @@ public class CombatSentinelIntegration extends SentinelIntegration {
             }
             // allow long range
             return false;
-        } else if (combatData.getNoAttack(true) > 0) {
+        }
+        if (combatData.getNoAttack(true) > 0) {
             return false;
         }
 
@@ -135,7 +180,6 @@ public class CombatSentinelIntegration extends SentinelIntegration {
             final double itemCd = PlayerUtil.getCd(player, EquipmentSlot.HAND);
             double scaleFactor = Math.max(0.85, 2 + Math.log10(Math.atan(len)));
             int deduction = len == 0 ? 0 : (int) Math.round(scaleFactor * itemCd);
-            npc.getNavigator().setTarget(ent, true);
             combatData.setNoAttack(true, Math.round(combatData.getNoAttack(true) + deduction));
         }
         return false;
@@ -182,6 +226,11 @@ public class CombatSentinelIntegration extends SentinelIntegration {
             lastMovementAverageAverages.add(0, movementAverageAverage);
             lastMovementAverageAverages.setSize(CACHE_SIZE);
         }
+    }
+
+    public static class StrafeData {
+        public int direction = ThreadLocalRandom.current().nextBoolean() ? 1 : -1;
+        public Location target = null;
     }
 
 }
