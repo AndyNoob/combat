@@ -285,7 +285,7 @@ public class PlayerUtil {
                             return Double.compare(dir.dot(a), dir.dot(b));
                         }).reversed())
                         .tickCheck(left -> {
-                            if (ticker.getAndIncrement() % ticksPerStep != 0) return false;
+                            if (ticker.getAndIncrement() % Math.max(1, ticksPerStep) != 0) return false;
                             final Location curLoc = supplier.get();
                             possible.putAll(collectNearby(owner, reach, curLoc, possible.keySet()));
                             direction.set(curLoc.getDirection());
