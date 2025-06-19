@@ -4,6 +4,7 @@ main: comfortable_andy.combat.CombatMain
 api-version: '1.20'
 softdepend:
   - Sentinel
+  - Citizens
 permissions:
   combat.command.use:
     default: op

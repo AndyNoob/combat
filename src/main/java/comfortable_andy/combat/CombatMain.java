@@ -4,9 +4,12 @@ import com.destroystokyo.paper.MaterialTags;
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.BoolArgumentType;
+import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import comfortable_andy.combat.actions.*;
 import comfortable_andy.combat.compat.CombatSentinelIntegration;
+import comfortable_andy.combat.compat.CombatTrait;
 import comfortable_andy.combat.handler.OrientedBoxHandler;
 import comfortable_andy.combat.util.PlayerUtil;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
@@ -22,8 +25,12 @@ import me.comfortable_andy.mapable.Mapable;
 import me.comfortable_andy.mapable.MapableBuilder;
 import net.citizensnpcs.api.CitizensAPI;
 import net.citizensnpcs.api.npc.NPC;
+import net.citizensnpcs.api.trait.TraitInfo;
 import net.minecraft.network.chat.Component;
-import org.bukkit.*;
+import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
+import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Entity;
@@ -45,6 +52,7 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.NotNull;
 import org.mcmonkey.sentinel.SentinelPlugin;
 import org.mcmonkey.sentinel.SentinelTrait;
 
@@ -90,7 +98,13 @@ public final class CombatMain extends JavaPlugin implements Listener {
         boxHandler.runTaskTimer(this, 0, 1);
         getServer().getPluginManager().registerEvents(this, this);
 
-        final LifecycleEventManager<Plugin> manager = this.getLifecycleManager();
+        final boolean citizensEnabled = getServer().getPluginManager().isPluginEnabled("Citizens");
+
+        if (citizensEnabled) {
+            CitizensAPI.getTraitFactory().registerTrait(TraitInfo.create(CombatTrait.class));
+        }
+
+        final LifecycleEventManager<@NotNull Plugin> manager = this.getLifecycleManager();
         manager.registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             final Commands commands = event.registrar();
             final var reload = Commands
@@ -176,7 +190,70 @@ public final class CombatMain extends JavaPlugin implements Listener {
                     "Combat plugin command.",
                     List.of("cb")
             );
+            if (!citizensEnabled) return;
+            commands.register(
+                    Commands.literal("combatTrait")
+                            .requires(c -> {
+                                NPC npc = getSelected(c);
+                                return npc != null && npc.getEntity() instanceof Player && npc.hasTrait(CombatTrait.class);
+                            })
+                            .requires(s -> s.getSender()
+                                    .hasPermission("combat.command.use"))
+                            .then(Commands
+                                    .literal("getOverHere")
+                                    .executes(c -> {
+                                        CombatTrait trait = yoinkTrait(c);
+                                        trait.findMarker().teleport(c.getSource().getLocation());
+                                        c.getSource().getSender().sendMessage("NPC has been set to go to your location.");
+                                        return 1;
+                                    })
+                            )
+                            .then(Commands
+                                    .literal("followMe")
+                                    .executes(c -> {
+                                        CombatTrait trait = yoinkTrait(c);
+                                        if (!(c.getSource().getSender() instanceof Entity e)) {
+                                            throw new SimpleCommandExceptionType(Component.literal("No console bro")).create();
+                                        }
+                                        new BukkitRunnable() {
+                                            int ticks = 7 * 20;
+                                            @Override
+                                            public void run() {
+                                                if (ticks-- <= 0) {
+                                                    cancel();
+                                                    e.sendActionBar(net.kyori.adventure.text.Component.text("done"));
+                                                    return;
+                                                }
+                                                Location add = e.getLocation().add(1, 0, 0);
+                                                e.sendActionBar(net.kyori.adventure.text.Component.text(add.toString()));
+                                                trait.findMarker().teleport(add);
+                                            }
+                                        }.runTaskTimer(this, 0, 1);
+                                        return 1;
+                                    })
+                            )
+                            .build(),
+                    List.of("ct", "ctrait")
+            );
         });
+    }
+
+    @SuppressWarnings("UnstableApiUsage")
+    private static @NotNull CombatTrait yoinkTrait(CommandContext<CommandSourceStack> c) throws CommandSyntaxException {
+        NPC npc = getSelected(c.getSource());
+        if (npc == null) {
+            throw new SimpleCommandExceptionType(Component.literal("NPC not selected")).create();
+        }
+        CombatTrait trait = npc.getTraitNullable(CombatTrait.class);
+        if (trait == null) {
+            throw new SimpleCommandExceptionType(Component.literal("NPC doesn't have combat trait")).create();
+        }
+        return trait;
+    }
+
+    @SuppressWarnings("UnstableApiUsage")
+    private static NPC getSelected(CommandSourceStack c) {
+        return CitizensAPI.getDefaultNPCSelector().getSelected(c.getSender());
     }
 
     private void reload() {
@@ -371,7 +448,7 @@ public final class CombatMain extends JavaPlugin implements Listener {
 
     public void purgeData() {
         playerData.entrySet().removeIf(d -> {
-            if (getServer().getPluginManager().isPluginEnabled("Sentinel")) {
+            if (getServer().getPluginManager().isPluginEnabled("Citizens")) {
                 if (CitizensAPI.getNPCRegistry().isNPC(d.getKey())) return false;
             }
             return !d.getValue().getPlayer().isOnline();

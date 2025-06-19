@@ -40,11 +40,12 @@ public class MoveToEntityGoal extends BehaviorGoalAdapter {
         boolean executing = !this.npc.getNavigator().isNavigating() && this.target != null;
 
         if (executing) {
-            this.npc.getNavigator().setTarget(target, true);
-            this.npc.getNavigator().getLocalParameters().addSingleUseCallback(reason -> {
-                this.finished = true;
-                this.reason = reason;
-            });
+            this.npc.getNavigator().setTarget(target, false);
+            this.npc.getNavigator().getLocalParameters()
+                    .addSingleUseCallback(reason -> {
+                        this.finished = true;
+                        this.reason = reason;
+                    });
         }
 
         return executing;
