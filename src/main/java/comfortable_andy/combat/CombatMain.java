@@ -64,6 +64,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import static comfortable_andy.combat.util.PlayerUtil.getCd;
 import static org.bukkit.util.NumberConversions.ceil;
 
+@SuppressWarnings("unused")
 public final class CombatMain extends JavaPlugin implements Listener {
 
     private static CombatMain INSTANCE;
@@ -212,23 +213,16 @@ public final class CombatMain extends JavaPlugin implements Listener {
                                     .literal("followMe")
                                     .executes(c -> {
                                         CombatTrait trait = yoinkTrait(c);
-                                        if (!(c.getSource().getSender() instanceof Entity e)) {
+                                        if (!(c.getSource().getSender() instanceof LivingEntity e)) {
                                             throw new SimpleCommandExceptionType(Component.literal("No console bro")).create();
                                         }
+                                        trait.target = e;
                                         new BukkitRunnable() {
-                                            int ticks = 7 * 20;
                                             @Override
                                             public void run() {
-                                                if (ticks-- <= 0) {
-                                                    cancel();
-                                                    e.sendActionBar(net.kyori.adventure.text.Component.text("done"));
-                                                    return;
-                                                }
-                                                Location add = e.getLocation().add(1, 0, 0);
-                                                e.sendActionBar(net.kyori.adventure.text.Component.text(add.toString()));
-                                                trait.findMarker().teleport(add);
+                                                trait.target = null;
                                             }
-                                        }.runTaskTimer(this, 0, 1);
+                                        }.runTaskLater(this, 7 * 20);
                                         return 1;
                                     })
                             )

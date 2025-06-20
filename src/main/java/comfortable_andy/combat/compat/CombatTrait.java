@@ -10,9 +10,14 @@ import net.citizensnpcs.api.trait.TraitName;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.block.Block;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Marker;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.entity.EntityDamageEvent;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +33,7 @@ public class CombatTrait extends Trait {
     private final List<Goal> goals = new ArrayList<>();
     private ArmorStand markerMarker;
     private ArmorStand npcMarker;
+    public LivingEntity target = null;
 
     public CombatTrait() {
         super("combat");
@@ -37,9 +43,11 @@ public class CombatTrait extends Trait {
     public void run() {
         if (npc == null || !npc.isSpawned()) return;
         // TODO targeting logic
+        npc.getEntity().setInvulnerable(false);
         npc.getDefaultGoalController().run();
+        Marker marker = findMarker();
         if (markerMarker == null)
-            markerMarker = findMarker().getWorld().spawn(findMarker().getLocation(), ArmorStand.class, a -> {
+            markerMarker = marker.getWorld().spawn(marker.getLocation(), ArmorStand.class, a -> {
                 a.setMarker(true);
                 a.setPersistent(false);
                 a.setSmall(true);
@@ -55,8 +63,41 @@ public class CombatTrait extends Trait {
                 a.setArms(false);
                 a.setBasePlate(false);
             });
-        markerMarker.teleport(findMarker());
+        markerMarker.teleport(marker);
         npcMarker.teleport(npc.getStoredLocation());
+        moveMarkerToTarget();
+    }
+
+    public void moveMarkerToTarget() {
+        if (target == null) {
+            tryGroundMarker();
+            return;
+        }
+        Marker marker = findMarker();
+        var offset = target.getLocation()
+                .subtract(getLocation())
+                .toVector();
+        offset.normalize()
+                .rotateAroundY(Math.PI / 2);
+        var newPos = target.getLocation().add(offset);
+        marker.teleport(newPos);
+    }
+
+    public void tryGroundMarker() {
+        Marker marker = findMarker();
+        Location location = marker.getLocation();
+        Block block = location.getBlock();
+        if (!block.isEmpty()
+                || !block.getRelative(0, -1, 0).isEmpty()) {
+            return;
+        }
+        for (int i = 2; i < 20; i++) {
+            Block relative = block.getRelative(0, -i, 0);
+            if (!relative.isEmpty()) {
+                marker.teleport(relative.getLocation().add(0, 1, 0));
+                break;
+            }
+        }
     }
 
     @Override
@@ -89,6 +130,11 @@ public class CombatTrait extends Trait {
         return true;
     }
 
+    @EventHandler
+    public void onDamage(EntityDamageEvent event) {
+
+    }
+
     public Marker findMarker() {
         if (marker == null || marker.isDead()) {
             Entity e = markerId == null ? null : Bukkit.getEntity(UUID.fromString(markerId));
@@ -104,4 +150,7 @@ public class CombatTrait extends Trait {
         return marker;
     }
 
+    public @NotNull Location getLocation() {
+        return npc.isSpawned() ? npc.getEntity().getLocation() : npc.getStoredLocation();
+    }
 }
