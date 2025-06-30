@@ -4,6 +4,7 @@ import com.destroystokyo.paper.MaterialTags;
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.BoolArgumentType;
+import com.mojang.brigadier.arguments.FloatArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
@@ -225,6 +226,25 @@ public final class CombatMain extends JavaPlugin implements Listener {
                                         }.runTaskLater(this, 7 * 20);
                                         return 1;
                                     })
+                            )
+                            .then(Commands
+                                    .literal("speed")
+                                    .executes(c -> {
+                                        c.getSource().getSender().sendMessage("Speed: " + yoinkTrait(c).speed);
+                                        return 1;
+                                    })
+                                    .then(Commands
+                                            .argument(
+                                                    "speed",
+                                                    FloatArgumentType.floatArg(0)
+                                            )
+                                            .executes(c -> {
+                                                CombatTrait trait = yoinkTrait(c);
+                                                trait.speed = c.getArgument("speed", Float.class);
+                                                c.getSource().getSender().sendMessage("New speed: " + trait.speed);
+                                                return 1;
+                                            })
+                                    )
                             )
                             .build(),
                     List.of("ct", "ctrait")

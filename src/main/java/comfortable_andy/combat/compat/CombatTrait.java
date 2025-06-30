@@ -1,21 +1,26 @@
 package comfortable_andy.combat.compat;
 
+import comfortable_andy.combat.CombatMain;
 import comfortable_andy.combat.compat.goals.AttackGoal;
 import comfortable_andy.combat.compat.goals.MoveToEntityGoal;
+import comfortable_andy.combat.util.PlayerUtil;
+import io.papermc.paper.event.entity.EntityKnockbackEvent;
 import net.citizensnpcs.api.ai.Goal;
 import net.citizensnpcs.api.ai.GoalController;
+import net.citizensnpcs.api.event.DespawnReason;
 import net.citizensnpcs.api.persistence.Persist;
 import net.citizensnpcs.api.trait.Trait;
 import net.citizensnpcs.api.trait.TraitName;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.attribute.Attributable;
 import org.bukkit.block.Block;
-import org.bukkit.entity.ArmorStand;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Marker;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.jetbrains.annotations.NotNull;
 
@@ -24,10 +29,14 @@ import java.util.List;
 import java.util.UUID;
 
 @TraitName("combat")
-public class CombatTrait extends Trait {
+public class CombatTrait extends Trait implements Listener {
 
     @Persist("markerId")
-    public String markerId;
+    public String markerId; // FIXME this is not saving
+    @Persist("speed")
+    public double speed = 0.1;
+    @Persist("strafeOffset")
+    public double strafeOffset = 2;
     private Marker marker;
     public boolean planningToAttack = false;
     private final List<Goal> goals = new ArrayList<>();
@@ -44,7 +53,8 @@ public class CombatTrait extends Trait {
         if (npc == null || !npc.isSpawned()) return;
         // TODO targeting logic
         npc.getEntity().setInvulnerable(false);
-        npc.getDefaultGoalController().run();
+//        npc.getDefaultGoalController().run();
+        CombatMain.getInstance().getData((Player) npc.getEntity()).updateDelays();
         Marker marker = findMarker();
         if (markerMarker == null)
             markerMarker = marker.getWorld().spawn(marker.getLocation(), ArmorStand.class, a -> {
@@ -66,24 +76,30 @@ public class CombatTrait extends Trait {
         markerMarker.teleport(marker);
         npcMarker.teleport(npc.getStoredLocation());
         moveMarkerToTarget();
+        float reach = PlayerUtil.getReach((Attributable) npc.getEntity());
+        planningToAttack = target != null && target.getLocation().distanceSquared(npc.getEntity().getLocation()) <= reach * reach;
     }
 
     public void moveMarkerToTarget() {
         if (target == null) {
-            tryGroundMarker();
+            groundMarker();
             return;
         }
         Marker marker = findMarker();
-        var offset = target.getLocation()
-                .subtract(getLocation())
-                .toVector();
-        offset.normalize()
-                .rotateAroundY(Math.PI / 2);
-        var newPos = target.getLocation().add(offset);
+        var toTarget = target.getLocation().toVector()
+                .subtract(getLocation().toVector())
+                .normalize();
+        var offset = toTarget.clone()
+                .rotateAroundY(Math.PI / 2)
+                .multiply(strafeOffset);
+        float reach = PlayerUtil.getReach(getPlayer());
+        var newPos = target.getLocation()
+                .add(offset)
+                .subtract(toTarget.multiply(Math.sqrt(reach * reach - strafeOffset * strafeOffset)));
         marker.teleport(newPos);
     }
 
-    public void tryGroundMarker() {
+    public void groundMarker() {
         Marker marker = findMarker();
         Location location = marker.getLocation();
         Block block = location.getBlock();
@@ -130,9 +146,45 @@ public class CombatTrait extends Trait {
         return true;
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOW)
     public void onDamage(EntityDamageEvent event) {
+        if (event.getEntity() == npc.getEntity()) {
+            event.setCancelled(false);
+            getPlayer().playHurtAnimation(0);
+        }
+        if (event instanceof EntityDamageByEntityEvent e
+                && e.getDamager() instanceof LivingEntity le) {
+            if (le == npc.getEntity()) {
+                if (event.getEntity() instanceof LivingEntity ee
+                        && ee.getHealth() - event.getFinalDamage() <= 0) {
+                    target = null;
+                }
+            } else target = le;
+        }
+    }
 
+    @Override
+    public void onDespawn(DespawnReason reason) {
+        if (reason == DespawnReason.DEATH) {
+            Bukkit.getScheduler().runTaskLater(
+                    CombatMain.getInstance(),
+                    () -> {
+                        npc.spawn(npc.getStoredLocation());
+                        System.out.println("respawned");
+                    },
+                    20
+            );
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOW)
+    public void onKnockback(EntityKnockbackEvent event) {
+        event.setCancelled(false);
+    }
+
+    @Override
+    public void onSpawn() {
+        target = null;
     }
 
     public Marker findMarker() {
@@ -148,6 +200,10 @@ public class CombatTrait extends Trait {
             } else marker = m;
         }
         return marker;
+    }
+
+    public Player getPlayer() {
+        return (Player) npc.getEntity();
     }
 
     public @NotNull Location getLocation() {
