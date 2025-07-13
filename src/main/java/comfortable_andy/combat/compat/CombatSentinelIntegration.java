@@ -8,7 +8,6 @@ import lombok.Data;
 import net.citizensnpcs.api.npc.NPC;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.Particle;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -34,7 +33,6 @@ public class CombatSentinelIntegration extends SentinelIntegration {
     public static final String META_KEY = "use-combat";
 
     private final Map<SentinelTrait, TrackingData> ticking = new ConcurrentHashMap<>();
-    private final Map<SentinelTrait, StrafeData> strafing = new ConcurrentHashMap<>();
 
     public CombatSentinelIntegration() {
         new BukkitRunnable() {
@@ -48,7 +46,6 @@ public class CombatSentinelIntegration extends SentinelIntegration {
                     LivingEntity chasing = trait.chasing;
                     if (chasing == null) {
                         iterator.remove();
-                        strafing.remove(trait);
                         continue;
                     }
                     if (npc == null
@@ -56,7 +53,6 @@ public class CombatSentinelIntegration extends SentinelIntegration {
                             || !npc.hasTrait(trait.getClass())
                     ) {
                         iterator.remove();
-                        strafing.remove(trait);
                         continue;
                     }
 
@@ -72,21 +68,28 @@ public class CombatSentinelIntegration extends SentinelIntegration {
                         CombatMain.getInstance().getData(player).updateDelays();
 
                     if (trait.cTick < SentinelPlugin.instance.tickRate) {
-                        boolean macing = isPlanningAttack(chasing);
-                        if (chasing.hasActiveItem() || macing) {
+                        boolean planning = isPlanningAttack(chasing, false);
+                        if (chasing.hasActiveItem() || planning) {
                             if (!trait.isBlocking) trait.startBlocking();
                             trait.faceLocation(chasing.getEyeLocation());
                         }
                         double maceDist = chasing.getLocation()
-                                .distanceSquared(trait.getLivingEntity().getEyeLocation());
+                                .distance(trait.getLivingEntity().getEyeLocation());
                         if (
-                                macing
+                                isPlanningAttack(chasing, true)
                                 && maceDist < PlayerUtil.getReach(chasing) * 2
                                 && trait.getLivingEntity() instanceof Player player
                                 && CombatMain.getInstance().getData(player).getNoAttack(true) < 1
                         ) {
                             trait.faceLocation(chasing.getEyeLocation());
+                            Location location = player.getLocation();
+                            org.bukkit.util.Vector dir = chasing.getLocation().subtract(location).toVector().normalize();
+                            location.setDirection(dir);
+                            CombatMain.getInstance().getData(player).overridePosAndCamera(location);
+                            player.setSprinting(true);
+                            player.setVelocity(dir.clone().multiply(-trait.speed / 2));
                             CombatMain.getInstance().runAction(player, IAction.ActionType.ATTACK, false);
+                            player.setSprinting(false);
                         }
                         /*if (trait.cTick == 1) {
                             StrafeData strafe = strafing.computeIfAbsent(trait, k -> new StrafeData());
@@ -109,13 +112,13 @@ public class CombatSentinelIntegration extends SentinelIntegration {
         }.runTaskTimer(CombatMain.getInstance(), 0, 1);
     }
 
-    public boolean isPlanningAttack(LivingEntity chasing) {
+    public boolean isPlanningAttack(LivingEntity chasing, boolean mace) {
         EntityEquipment equipment = chasing.getEquipment();
         if (equipment == null) return false;
         Material mainHand = equipment.getItemInOffHand().getType();
-        if (mainHand == Material.CROSSBOW) return true;
+        if (!mace && mainHand == Material.CROSSBOW) return true;
         Material offHand = equipment.getItemInMainHand().getType();
-        if (offHand == Material.CROSSBOW) return true;
+        if (!mace && offHand == Material.CROSSBOW) return true;
         return chasing.getFallDistance() > 0
                 && (offHand == Material.MACE
                 || mainHand == Material.MACE);
