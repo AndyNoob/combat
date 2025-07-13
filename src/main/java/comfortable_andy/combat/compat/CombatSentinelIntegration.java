@@ -6,8 +6,10 @@ import comfortable_andy.combat.actions.IAction;
 import comfortable_andy.combat.util.PlayerUtil;
 import lombok.Data;
 import net.citizensnpcs.api.npc.NPC;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.block.Block;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -68,28 +70,33 @@ public class CombatSentinelIntegration extends SentinelIntegration {
                         CombatMain.getInstance().getData(player).updateDelays();
 
                     if (trait.cTick < SentinelPlugin.instance.tickRate) {
-                        boolean planning = isPlanningAttack(chasing, false);
-                        if (chasing.hasActiveItem() || planning) {
+                        boolean attacking = isPlanningAttack(chasing, false);
+                        if (chasing.hasActiveItem() || attacking) {
                             if (!trait.isBlocking) trait.startBlocking();
                             trait.faceLocation(chasing.getEyeLocation());
                         }
                         double maceDist = chasing.getLocation()
                                 .distance(trait.getLivingEntity().getEyeLocation());
-                        if (
-                                isPlanningAttack(chasing, true)
-                                && maceDist < PlayerUtil.getReach(chasing) * 2
-                                && trait.getLivingEntity() instanceof Player player
-                                && CombatMain.getInstance().getData(player).getNoAttack(true) < 1
-                        ) {
-                            trait.faceLocation(chasing.getEyeLocation());
+                        if (trait.getLivingEntity() instanceof Player player) {
                             Location location = player.getLocation();
                             org.bukkit.util.Vector dir = chasing.getLocation().subtract(location).toVector().normalize();
-                            location.setDirection(dir);
-                            CombatMain.getInstance().getData(player).overridePosAndCamera(location);
-                            player.setSprinting(true);
-                            player.setVelocity(dir.clone().multiply(-trait.speed / 2));
-                            CombatMain.getInstance().runAction(player, IAction.ActionType.ATTACK, false);
-                            player.setSprinting(false);
+                            if (
+                                    isPlanningAttack(chasing, true)
+                                            && maceDist < PlayerUtil.getReach(chasing) * 2
+                                            && CombatMain.getInstance().getData(player).getNoAttack(true) < 1
+                            ) {
+                                trait.faceLocation(chasing.getEyeLocation());
+                                location.setDirection(dir);
+                                CombatMain.getInstance().getData(player).overridePosAndCamera(location);
+                                player.setSprinting(true);
+                                CombatMain.getInstance().runAction(player, IAction.ActionType.ATTACK, false);
+                                player.setSprinting(false);
+                                player.setVelocity(dir.clone().multiply(-Math.sqrt(trait.speed)));
+                            }
+                            Block below = player.getLocation().subtract(0, 0.1, 0).getBlock();
+                            if (!npc.isFlyable() && below.isEmpty() && below.getRelative(0, -1, 0).isEmpty()) {
+                                player.setVelocity(dir.clone().multiply(Math.sqrt(trait.speed / 3)));
+                            }
                         }
                         /*if (trait.cTick == 1) {
                             StrafeData strafe = strafing.computeIfAbsent(trait, k -> new StrafeData());
@@ -109,7 +116,9 @@ public class CombatSentinelIntegration extends SentinelIntegration {
                     }
                 }
             }
-        }.runTaskTimer(CombatMain.getInstance(), 0, 1);
+        }.
+
+                runTaskTimer(CombatMain.getInstance(), 0, 1);
     }
 
     public boolean isPlanningAttack(LivingEntity chasing, boolean mace) {
