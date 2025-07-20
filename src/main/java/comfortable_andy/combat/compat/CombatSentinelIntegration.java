@@ -6,10 +6,10 @@ import comfortable_andy.combat.actions.IAction;
 import comfortable_andy.combat.util.PlayerUtil;
 import lombok.Data;
 import net.citizensnpcs.api.npc.NPC;
-import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -80,22 +80,36 @@ public class CombatSentinelIntegration extends SentinelIntegration {
                         if (trait.getLivingEntity() instanceof Player player) {
                             Location location = player.getLocation();
                             org.bukkit.util.Vector dir = chasing.getLocation().subtract(location).toVector().normalize();
+                            float chaseReach = PlayerUtil.getReach(chasing);
                             if (
                                     isPlanningAttack(chasing, true)
-                                            && maceDist < PlayerUtil.getReach(chasing) * 2
+                                            && maceDist < chaseReach * 2
                                             && CombatMain.getInstance().getData(player).getNoAttack(true) < 1
                             ) {
-                                trait.faceLocation(chasing.getEyeLocation());
-                                location.setDirection(dir);
-                                CombatMain.getInstance().getData(player).overridePosAndCamera(location);
-                                player.setSprinting(true);
-                                CombatMain.getInstance().runAction(player, IAction.ActionType.ATTACK, false);
-                                player.setSprinting(false);
-                                player.setVelocity(dir.clone().multiply(-Math.sqrt(trait.speed)));
+//                                trait.faceLocation(chasing.getEyeLocation());
+//                                location.setDirection(dir);
+//                                CombatMain.getInstance().getData(player).overridePosAndCamera(location);
+//                                player.setSprinting(true);
+//                                CombatMain.getInstance().runAction(player, IAction.ActionType.ATTACK, false);
+//                                player.setSprinting(false);
+                                double horizontalDistance = player.getLocation()
+                                        .subtract(chasing.getLocation()).toVector()
+                                        .setY(0)
+                                        .length();
+                                player.setVelocity(new org.bukkit.util.Vector(0, 0, 1)
+                                        .rotateAroundY(-Math.toRadians(chasing.getLocation().getYaw()))
+                                        .multiply(horizontalDistance > chaseReach ? 1 : -1)
+                                        .multiply(Math.sqrt(trait.speed / 3))
+                                        .setY(0.1)
+                                );
                             }
                             Block below = player.getLocation().subtract(0, 0.1, 0).getBlock();
-                            if (!npc.isFlyable() && below.isEmpty() && below.getRelative(0, -1, 0).isEmpty()) {
-                                player.setVelocity(dir.clone().multiply(Math.sqrt(trait.speed / 3)));
+                            if (!npc.isFlyable() && below.isEmpty()
+                                    && below.getRelative(0, -1, 0).isEmpty()
+                                    && below.getRelative(0, -2, 0).isEmpty()
+                                    && below.getRelative(0, -3, 0).isEmpty()
+                                    && below.getRelative(0, -4, 0).isEmpty()) {
+                                player.setVelocity(dir.clone().setY(0).multiply(Math.sqrt(trait.speed / 3)));
                             }
                         }
                         /*if (trait.cTick == 1) {
@@ -128,7 +142,8 @@ public class CombatSentinelIntegration extends SentinelIntegration {
         if (!mace && mainHand == Material.CROSSBOW) return true;
         Material offHand = equipment.getItemInMainHand().getType();
         if (!mace && offHand == Material.CROSSBOW) return true;
-        return chasing.getFallDistance() > 0
+        return (chasing instanceof Player player
+                && ((CraftPlayer) player).getHandle().currentImpulseImpactPos != null)
                 && (offHand == Material.MACE
                 || mainHand == Material.MACE);
     }
