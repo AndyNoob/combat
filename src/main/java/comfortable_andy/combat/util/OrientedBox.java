@@ -125,15 +125,15 @@ public class OrientedBox implements Cloneable {
             final Vector mtvCandidate;
             double multi = vals.get(2) - vals.get(1);
 
-            CombatMain.getInstance().debug("axis " + axis + " " + axis.isNormalized());
+            CombatMain.debug("axis " + axis + " " + axis.isNormalized());
 
             if (thisRange.containsRange(otherRange) || otherRange.containsRange(thisRange)) {
-                CombatMain.getInstance().debug("contains");
+                CombatMain.debug("contains");
                 multi += Math.copySign(1, multi) * Math.min(Math.abs(vals.get(3) - vals.get(2)), Math.abs(vals.get(1) - vals.get(0)));
             }
 
             if (Objects.equals(vals.get(0), otherRange.getMinimum())) {
-                CombatMain.getInstance().debug("negating");
+                CombatMain.debug("negating");
                 multi *= -1;
             }
 
