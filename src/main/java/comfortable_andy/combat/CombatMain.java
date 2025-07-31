@@ -15,7 +15,6 @@ import comfortable_andy.combat.handler.OrientedBoxHandler;
 import comfortable_andy.combat.util.PlayerUtil;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
-import io.papermc.paper.command.brigadier.argument.ArgumentTypes;
 import io.papermc.paper.command.brigadier.argument.resolvers.selector.EntitySelectorArgumentResolver;
 import io.papermc.paper.event.player.PrePlayerAttackEntityEvent;
 import io.papermc.paper.plugin.lifecycle.event.LifecycleEventManager;
@@ -41,7 +40,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.event.block.BlockDamageAbortEvent;
 import org.bukkit.event.block.BlockDamageEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -158,8 +156,8 @@ public final class CombatMain extends JavaPlugin implements Listener {
                                     .executes(enableExecutor)
                             )
                             .executes(enableExecutor)
-                    )
-                    .then(Commands.literal("npc")
+                    );
+                    /*.then(Commands.literal("npc")
                             .then(Commands
                                     .argument("npc", ArgumentTypes.entity())
                                     .requires(s -> getServer().getPluginManager().isPluginEnabled("Sentinel"))
@@ -168,7 +166,7 @@ public final class CombatMain extends JavaPlugin implements Listener {
                                             .executes(npcExecutor)
                                     )
                                     .executes(npcExecutor))
-                    );
+                    );*/
             final var show = Commands
                     .literal("show")
                     .then(Commands.literal("debug_msg").executes(s -> {
@@ -315,11 +313,6 @@ public final class CombatMain extends JavaPlugin implements Listener {
     }
 
     @EventHandler(ignoreCancelled = true)
-    public void onStopBreaking(BlockDamageAbortEvent event) {
-        interactBlacklist.remove(event.getPlayer());
-    }
-
-    @EventHandler(ignoreCancelled = true)
     public void onSwap(PlayerSwapHandItemsEvent event) {
         if (boxHandler.isChecking(event.getPlayer())) event.setCancelled(true);
     }
@@ -451,7 +444,7 @@ public final class CombatMain extends JavaPlugin implements Listener {
         return item.getType() == Material.TRIDENT && item.getEnchantmentLevel(Enchantment.RIPTIDE) > 0;
     }
 
-    public void debug(Object... stuff) {
+    private void debug0(Object... stuff) {
         if (!debugLog) return;
         getLogger().info(String.join(" ", Arrays.stream(stuff).map(Objects::toString).toArray(String[]::new)));
     }
@@ -558,6 +551,14 @@ public final class CombatMain extends JavaPlugin implements Listener {
 
     public List<IAction> getActions() {
         return new ArrayList<>(actions);
+    }
+
+    public static void debug(String str) {
+        getInstance().debug0(str);
+    }
+
+    public static void debug(Object o) {
+        getInstance().debug0(Objects.toString(o));
     }
 
 }
