@@ -17,6 +17,8 @@ import org.joml.Vector3d;
 import org.joml.Vector3f;
 
 import java.lang.reflect.Field;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Vector;
 
 import static comfortable_andy.combat.util.VecUtil.*;
@@ -53,6 +55,7 @@ public class CombatPlayerData {
     private Vector3d positionDelta = new Vector3d();
     private Pair<Long, Long> attackDelayLeft = new Pair<>(0L, 0L);
     private Pair<Long, Long> noAttackDelayLeft = new Pair<>(0L, 0L);
+    private Map<String, Long> extraDelaysLeft = new HashMap<>();
     private Vector2f cameraOverride = null;
     private Vector3d positionOverride = null;
     @Getter
@@ -120,6 +123,7 @@ public class CombatPlayerData {
     public void updateDelays() {
         this.attackDelayLeft = this.attackDelayLeft.mapFirst(a -> Math.max(0, a - 1)).mapSecond(a -> Math.max(0, a - 1));
         this.noAttackDelayLeft = this.noAttackDelayLeft.mapFirst(a -> Math.max(0, a - 1)).mapSecond(a -> Math.max(0, a - 1));
+        this.extraDelaysLeft.replaceAll((a, b) -> b - 1);
     }
 
     /**
@@ -178,4 +182,13 @@ public class CombatPlayerData {
     public void setNoAttack(boolean main, long amt) {
         this.noAttackDelayLeft = main ? this.noAttackDelayLeft.mapFirst(a -> amt) : this.noAttackDelayLeft.mapSecond(a -> amt);
     }
+
+    public void setExtraCooldown(String id, long amt) {
+        this.extraDelaysLeft.put(id, amt);
+    }
+
+    public long getExtraCooldown(String id) {
+        return this.extraDelaysLeft.getOrDefault(id, 0L);
+    }
+
 }
