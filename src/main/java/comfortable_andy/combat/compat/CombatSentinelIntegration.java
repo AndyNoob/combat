@@ -4,10 +4,12 @@ import comfortable_andy.combat.CombatMain;
 import comfortable_andy.combat.CombatPlayerData;
 import comfortable_andy.combat.actions.IAction;
 import comfortable_andy.combat.util.PlayerUtil;
+import io.papermc.paper.datacomponent.DataComponentTypes;
 import lombok.Data;
 import net.citizensnpcs.api.npc.NPC;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Particle;
 import org.bukkit.block.Block;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Entity;
@@ -15,6 +17,7 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.joml.Vector2f;
 import org.mcmonkey.sentinel.SentinelIntegration;
@@ -30,9 +33,12 @@ import java.util.stream.Collectors;
 
 import static comfortable_andy.combat.util.VecUtil.bukkitAverage;
 
+@SuppressWarnings("UnstableApiUsage")
 public class CombatSentinelIntegration extends SentinelIntegration {
 
     public static final String META_KEY = "use-combat";
+    public static final String ENABLE_SHIELD = "enable-shield-dash";
+    public static final String ENABLE_LEAP = "enable-leap";
 
     private final Map<SentinelTrait, TrackingData> ticking = new ConcurrentHashMap<>();
 
@@ -58,75 +64,88 @@ public class CombatSentinelIntegration extends SentinelIntegration {
                         continue;
                     }
 
-                    Location targetAsLocation = npc.getNavigator().getTargetAsLocation();
-                    /*Location loc = targetAsLocation;
-                    if (loc != null && npc.getNavigator().isNavigating())
-                        npc.getEntity().getWorld().spawnParticle(Particle.FLAME, loc, 1, 0, 0, 0, 0);*/
+                    TrackingData trackData = entry.getValue();
+                    trackData.enterLocation(chasing.getLocation());
 
-                    TrackingData data = entry.getValue();
-                    data.enterLocation(chasing.getLocation());
-                    Entity entity = trait.getNPC().getEntity();
-                    if (entity instanceof Player player)
+                    Entity npcEntity = trait.getNPC().getEntity();
+
+                    if (npcEntity instanceof Player player)
                         CombatMain.getInstance().getData(player).updateDelays();
 
-                    if (trait.cTick < SentinelPlugin.instance.tickRate) {
-                        boolean attacking = isPlanningAttack(chasing, false);
-                        if (chasing.hasActiveItem() || attacking) {
-                            if (!trait.isBlocking) trait.startBlocking();
-                            trait.faceLocation(chasing.getEyeLocation());
-                        }
-                        double maceDist = chasing.getLocation()
-                                .distance(trait.getLivingEntity().getEyeLocation());
-                        if (trait.getLivingEntity() instanceof Player player) {
-                            Location location = player.getLocation();
-                            org.bukkit.util.Vector dir = chasing.getLocation().subtract(location).toVector().normalize();
-                            float chaseReach = PlayerUtil.getReach(chasing);
-                            if (
-                                    isPlanningAttack(chasing, true)
-                                            && maceDist < chaseReach * 2
-                                            && CombatMain.getInstance().getData(player).getNoAttack(true) < 1
-                            ) {
-//                                trait.faceLocation(chasing.getEyeLocation());
-//                                location.setDirection(dir);
-//                                CombatMain.getInstance().getData(player).overridePosAndCamera(location);
-//                                player.setSprinting(true);
-//                                CombatMain.getInstance().runAction(player, IAction.ActionType.ATTACK, false);
-//                                player.setSprinting(false);
-                                double horizontalDistance = player.getLocation()
-                                        .subtract(chasing.getLocation()).toVector()
-                                        .setY(0)
-                                        .length();
-                                player.setVelocity(new org.bukkit.util.Vector(0, 0, 1)
-                                        .rotateAroundY(-Math.toRadians(chasing.getLocation().getYaw()))
-                                        .multiply(horizontalDistance > chaseReach ? 1 : -1)
-                                        .multiply(Math.sqrt(trait.speed / 3))
-                                        .setY(0.1)
-                                );
-                            }
-                            Block below = player.getLocation().subtract(0, 0.1, 0).getBlock();
-                            if (!npc.isFlyable() && below.isEmpty()
-                                    && below.getRelative(0, -1, 0).isEmpty()
-                                    && below.getRelative(0, -2, 0).isEmpty()
-                                    && below.getRelative(0, -3, 0).isEmpty()
-                                    && below.getRelative(0, -4, 0).isEmpty()) {
-                                player.setVelocity(dir.clone().setY(0).multiply(Math.sqrt(trait.speed / 3)));
+                    if (trait.cTick >= SentinelPlugin.instance.tickRate) continue;
+
+                    boolean attacking = isPlanningAttack(chasing, false);
+                    if (chasing.hasActiveItem() || attacking) {
+                        ItemStack activeItem = chasing.getActiveItem();
+                        boolean notEating = !activeItem.hasData(DataComponentTypes.FOOD)
+                                && !activeItem.hasData(DataComponentTypes.CONSUMABLE);
+                        if (notEating) {
+                            if (activeItem.hasData(DataComponentTypes.BLOCKS_ATTACKS)) {
+                                if (npc.data().get(ENABLE_SHIELD, false)) trackData.shieldTicks++;
+                            } else trackData.shieldTicks = 0;
+                            if (trackData.shieldTicks < 5 && !trait.isBlocking) {
+                                trait.startBlocking();
                             }
                         }
-                        /*if (trait.cTick == 1) {
-                            StrafeData strafe = strafing.computeIfAbsent(trait, k -> new StrafeData());
-                            final var left = chasing.getLocation()
-                                    .subtract(npc.getEntity().getLocation())
-                                    .toVector()
-                                    .rotateAroundY(Math.toRadians(90))
-                                    .setY(0).normalize();
-                            left.checkFinite();
-                            Location strafeLoc = chasing.getLocation()
-                                    .add(left.multiply(strafe.direction * 3));
-                            strafeLoc.setY(npc.getEntity().getY());
-                            strafe.target = strafeLoc;
-                            trait.pathingTo = strafeLoc;
-                            npc.getNavigator().setTarget(strafeLoc);
-                        }*/
+                        trait.faceLocation(chasing.getEyeLocation());
+                    } else trackData.shieldTicks = 0;
+
+                    if (!(trait.getLivingEntity() instanceof Player npcPlayer)) continue;
+                    CombatPlayerData data = CombatMain.getInstance().getData(npcPlayer);
+                    Location location = npcPlayer.getLocation();
+                    var npcToChasingDir = chasing.getLocation()
+                            .subtract(location)
+                            .toVector().normalize();
+//                            double maceDist = chasing.getLocation()
+//                                    .distance(trait.getLivingEntity().getEyeLocation());
+                    boolean planningAttack = isPlanningAttack(chasing, true);
+
+                    if (!planningAttack && data.getExtraCooldown("leap") <= 0 && npc.data().get(ENABLE_LEAP, false) && chasing.getFallDistance() < 5) {
+                        if (chasing.getY() - npcPlayer.getY() > 8) {
+                            npcPlayer.setVelocity(
+                                    npcPlayer.getVelocity()
+                                            .add(new org.bukkit.util.Vector(
+                                                    0,
+                                                    (chasing.getY() - npcPlayer.getY()) / 8,
+                                                    0
+                                            ))
+                            );
+                            npcPlayer.getWorld().spawnParticle(Particle.GUST, npcPlayer.getLocation(), 5, 0.1, 0.1, 0.1, 0.05);
+                            data.setExtraCooldown("leap", 20 * 3);
+                        }
+                    }
+                    if (
+                            trackData.shieldTicks > 0 ||
+                            (planningAttack
+//                                            && maceDist < chaseReach * 4
+                                    && data.getNoAttack(true) < 1)
+                    ) {
+                        float chaseReach = PlayerUtil.getReach(chasing);
+                        double xyDistance = npcPlayer.getLocation()
+                                .subtract(chasing.getLocation()).toVector()
+                                .setY(0)
+                                .length();
+                        boolean shouldAvoid = xyDistance > chaseReach && trackData.shieldTicks <= 0;
+                        npcPlayer.setVelocity(new org.bukkit.util.Vector(0, 0, 1)
+                                .rotateAroundY(-Math.toRadians(chasing.getLocation().getYaw()))
+                                .multiply(shouldAvoid ? 1 : -1)
+                                .multiply(trait.speed / (10 - Math.min(5, trackData.shieldTicks + chasing.getFallDistance())))
+                                .setY(trackData.shieldTicks > 0 ? 0 : 0.05)
+                        );
+//                                boolean impulse = ((CraftPlayer) chasing).getHandle().currentImpulseImpactPos != null;
+//                                chasing.sendActionBar(Component.text((shouldAvoid ? "avoiding" : "dashing") + " impulse " + impulse  + " with shield ticks=" + data.shieldTicks + " tick=" + Bukkit.getCurrentTick()));
+                    }
+                    Block below = npcPlayer.getLocation().subtract(0, 0.1, 0).getBlock();
+                    if (!npc.isFlyable() && below.isEmpty()
+                            && below.getRelative(0, -1, 0).isEmpty()
+                            && below.getRelative(0, -2, 0).isEmpty()) {
+                        npcPlayer.setVelocity(
+                                npcPlayer.getVelocity()
+                                        .add(npcToChasingDir.clone()
+                                                .setY(0)
+                                                .multiply(trait.speed / 10)
+                                        )
+                        );
                     }
                 }
             }
@@ -151,7 +170,7 @@ public class CombatSentinelIntegration extends SentinelIntegration {
     @Override
     public boolean tryAttack(SentinelTrait st, LivingEntity ent) {
         final NPC npc = st.getNPC();
-        if (!npc.data().get(META_KEY, false)) return false;
+//        if (!npc.data().get(META_KEY, false)) return false;
         final Entity attacker = npc.getEntity();
         if (!(attacker instanceof Player player)) return false;
         TrackingData data = ticking.computeIfAbsent(
@@ -173,14 +192,12 @@ public class CombatSentinelIntegration extends SentinelIntegration {
         double reach = Math.max(PlayerUtil.getReach(ent), st.reach);
         if (player.getEyeLocation()
                 .distanceSquared(ent.getEyeLocation()) > reach * reach) {
-            if (!st.rangedChase) {
-                npc.getNavigator().cancelNavigation();
-            }
             // allow long range
             return false;
         }
         if (combatData.getNoAttack(true) > 0) {
-            return false;
+            st.timeSinceAttack = st.attackRate;
+            return true;
         }
 
         final double sign = Math.copySign(1, leftDot);
@@ -202,12 +219,16 @@ public class CombatSentinelIntegration extends SentinelIntegration {
         combatData.overridePosAndCamera(player.getLocation());
         if (CombatMain.getInstance()
                 .runAction(player, IAction.ActionType.ATTACK, false)) {
-            st.timeSinceAttack = 0;
+            st.timeSinceAttack = st.attackRate;
             double len = average.lengthSquared();
             final double itemCd = PlayerUtil.getCd(player, EquipmentSlot.HAND);
             double scaleFactor = Math.max(0.85, 2 + Math.log10(Math.atan(len)));
             int deduction = len == 0 ? 0 : (int) Math.round(scaleFactor * itemCd);
-            combatData.setNoAttack(true, Math.round(combatData.getNoAttack(true) + deduction));
+            int noAttack = Math.max(st.attackRate, Math.round(combatData.getNoAttack(true) + deduction));
+            combatData.setNoAttack(
+                    true,
+                    noAttack
+            );
         }
         return false;
     }
@@ -223,6 +244,7 @@ public class CombatSentinelIntegration extends SentinelIntegration {
         private final Vector<org.bukkit.util.Vector> lastMovementAverageAverages = new Vector<>(CACHE_SIZE);
         private org.bukkit.util.Vector movementAverage = new org.bukkit.util.Vector();
         private org.bukkit.util.Vector movementAverageAverage = new org.bukkit.util.Vector();
+        private int shieldTicks = 0;
 
         public Vector<Location> getLastLocations() {
             return new Vector<>(lastLocations);
