@@ -1,5 +1,6 @@
 package comfortable_andy.combat.actions;
 
+import comfortable_andy.combat.CombatMain;
 import comfortable_andy.combat.CombatPlayerData;
 import comfortable_andy.combat.util.PlayerUtil;
 import lombok.ToString;
@@ -15,6 +16,7 @@ public class StabAction implements IAction {
     @Override
     public @NotNull ActionResult tryActivate(Player player, CombatPlayerData data, ActionType type) {
         if (type == ActionType.DOUBLE_SNEAK) return ActionResult.NONE;
+        if (CombatMain.getInstance().getConfig().getBoolean("disable-stabs", false)) return ActionResult.NONE;
         boolean isAttack = type == ActionType.ATTACK;
         PlayerUtil.doSweep(
                 player,

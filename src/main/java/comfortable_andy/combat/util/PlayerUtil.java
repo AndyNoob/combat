@@ -99,7 +99,7 @@ public class PlayerUtil {
         final Item nmsItem = nmsStack.getItem();
 
         final int ticksPerStep = steps <= 1 ? 1 : ceil(ticks / (steps + 0d));
-        data.setNoAttack(isAttack, steps <= 1 ? 0 : ticks);
+//        data.setNoAttack(isAttack, steps <= 1 ? 0 : ticks);
 
         PlayerUtil.sweep(
                 player,
@@ -149,7 +149,7 @@ public class PlayerUtil {
                     final double bonus = nmsItem
                             .getAttackDamageBonus(entityHandle, (float) finalDamage, sourceHandle);
 
-                    @SuppressWarnings("deprecation") final boolean critical = strengthScale > 0.9 && !player.isClimbing() && player.getFallDistance() > 0 && !player.isOnGround() && !player.isInWater() && !player.isSprinting() && !player.isInsideVehicle() && !player.hasPotionEffect(PotionEffectType.BLINDNESS) && !paperConfig.entities.behavior.disablePlayerCrits;
+                    @SuppressWarnings("deprecation") boolean critical = CombatMain.getInstance().getConfig().getBoolean("enable-critical", false) && strengthScale > 0.9 && !player.isClimbing() && player.getFallDistance() > 0 && !player.isOnGround() && !player.isInWater() && !player.isSprinting() && !player.isInsideVehicle() && !player.hasPotionEffect(PotionEffectType.BLINDNESS) && !paperConfig.entities.behavior.disablePlayerCrits;
                     double finalFinalDamage = finalDamage + bonus + enchantmentDamage * strengthScale;
                     final Location location = player.getLocation();
                     if (critical) {

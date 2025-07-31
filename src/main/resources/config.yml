@@ -33,3 +33,6 @@ compensate-camera-movement: false
 camera-direction-title: true
 
 double-sneak-threshold-ms: 500
+
+enable-critical: false
+disable-stabs: false
