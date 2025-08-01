@@ -380,7 +380,7 @@ public final class CombatMain extends JavaPlugin implements Listener {
     public boolean runAction(Player player, IAction.ActionType actionType, boolean clickedBlock) {
         if (player.getGameMode() == GameMode.SPECTATOR) return false;
         final CombatPlayerData data = getData(player);
-        final boolean isConventional = actionType != IAction.ActionType.DOUBLE_SNEAK;
+        final boolean isConventional = actionType == IAction.ActionType.ATTACK || actionType == IAction.ActionType.INTERACT;
         final boolean isAttack = actionType == IAction.ActionType.ATTACK;
         if (isConventional) {
             if (data.getNoAttack(isAttack) > 0)
@@ -434,8 +434,13 @@ public final class CombatMain extends JavaPlugin implements Listener {
             if (!lastUnSneak.containsKey(player))
                 lastUnSneak.put(player, System.currentTimeMillis());
         } else {
-            if (!lastUnSneak.containsKey(player)) return;
-            if (System.currentTimeMillis() - lastUnSneak.remove(player) > getConfig().getLong("double-sneak-threshold-ms", 500)) return;
+            long sneakThreshold = getConfig().getLong("double-sneak-threshold-ms", 500);
+            long timeSinceUnSneak = lastUnSneak.containsKey(player) ? System.currentTimeMillis() - lastUnSneak.remove(player) : 0;
+            if (!lastUnSneak.containsKey(player)
+                    || timeSinceUnSneak > sneakThreshold) {
+                runAction(player, IAction.ActionType.SNEAK, false);
+                return;
+            }
             runAction(player, IAction.ActionType.DOUBLE_SNEAK, false);
         }
     }
@@ -476,6 +481,7 @@ public final class CombatMain extends JavaPlugin implements Listener {
         shieldBash = loadAction(shieldBashFile, ShieldBashAction.class);
         actions.addAll(Arrays.asList(
                 shieldBash,
+                new ChargeAction(),
                 sweep,
                 bash,
                 new StabAction()
@@ -485,7 +491,9 @@ public final class CombatMain extends JavaPlugin implements Listener {
 
     private void loadCompat() {
         if (getServer().getPluginManager().isPluginEnabled("Sentinel")) {
-            SentinelPlugin.instance.registerIntegration(new CombatSentinelIntegration());
+            CombatSentinelIntegration integration = new CombatSentinelIntegration();
+            SentinelPlugin.instance.registerIntegration(integration);
+            getServer().getPluginManager().registerEvents(integration, this);
             getLogger().info("Found Sentinel, added integration.");
         }
     }

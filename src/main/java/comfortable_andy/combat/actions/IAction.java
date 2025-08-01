@@ -12,7 +12,8 @@ public interface IAction {
     enum ActionType {
         ATTACK,
         INTERACT,
-        DOUBLE_SNEAK
+        DOUBLE_SNEAK,
+        SNEAK
     }
 
     enum ActionResult {

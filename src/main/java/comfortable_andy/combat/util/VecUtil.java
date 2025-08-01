@@ -1,6 +1,8 @@
 package comfortable_andy.combat.util;
 
+import org.bukkit.Color;
 import org.bukkit.Location;
+import org.bukkit.Particle;
 import org.bukkit.util.Vector;
 import org.joml.*;
 
@@ -89,5 +91,15 @@ public class VecUtil {
             add.apply(accumulator, lastToCur);
         }
         return div.apply(accumulator, size > 0 ? size : 1);
+    }
+
+    public static void summonCircle(Location location, int size) {
+        for (double d = 0; d <= 360; d += 360d / 10) {
+            Location particleLoc = location.clone();
+            double rad = Math.toRadians(d);
+            particleLoc.setX(location.getX() + Math.cos(rad) * size);
+            particleLoc.setZ(location.getZ() + Math.sin(rad) * size);
+            location.getWorld().spawnParticle(Particle.DUST, particleLoc, 1, new Particle.DustOptions(Color.RED, 1));
+        }
     }
 }

@@ -15,7 +15,8 @@ public class StabAction implements IAction {
 
     @Override
     public @NotNull ActionResult tryActivate(Player player, CombatPlayerData data, ActionType type) {
-        if (type == ActionType.DOUBLE_SNEAK) return ActionResult.NONE;
+        if (type != ActionType.ATTACK
+                && type != ActionType.INTERACT) return ActionResult.NONE;
         if (CombatMain.getInstance().getConfig().getBoolean("disable-stabs", false)) return ActionResult.NONE;
         boolean isAttack = type == ActionType.ATTACK;
         PlayerUtil.doSweep(

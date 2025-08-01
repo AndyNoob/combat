@@ -293,6 +293,7 @@ public class PlayerUtil {
                         })
                         .postTickCallback(() -> {
                             attackBox.clone().display(world, p -> CombatMain.getInstance().getData(p).getOptions().boxDisplayParticles());
+                            attackBox.setCenter(supplier.get().toVector());
                             attackBox.rotateBy(step);
                         })
                         .collidesWithOthers(collide)

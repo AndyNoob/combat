@@ -31,7 +31,8 @@ public abstract class SweepingAction implements IAction {
 
     @Override
     public @NotNull ActionResult tryActivate(Player player, CombatPlayerData data, ActionType type) {
-        if (type == ActionType.DOUBLE_SNEAK) return ActionResult.NONE;
+        if (type != ActionType.ATTACK && type != ActionType.INTERACT)
+            return ActionResult.NONE;
         if (data.getExtraCooldown("sweep") > 0) return ActionResult.NONE;
         boolean isAttack = type == ActionType.ATTACK;
         EquipmentSlot slot = isAttack ? EquipmentSlot.HAND : EquipmentSlot.OFF_HAND;
