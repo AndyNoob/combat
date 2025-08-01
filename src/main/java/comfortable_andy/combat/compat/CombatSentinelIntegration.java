@@ -5,23 +5,28 @@ import comfortable_andy.combat.CombatPlayerData;
 import comfortable_andy.combat.actions.IAction;
 import comfortable_andy.combat.util.PlayerUtil;
 import io.papermc.paper.datacomponent.DataComponentTypes;
+import io.papermc.paper.datacomponent.item.BlocksAttacks;
 import lombok.Data;
+import net.citizensnpcs.api.CitizensAPI;
 import net.citizensnpcs.api.npc.NPC;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.Particle;
+import net.kyori.adventure.key.Key;
+import net.kyori.adventure.text.Component;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
+import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.joml.Vector2f;
 import org.mcmonkey.sentinel.SentinelIntegration;
-import org.mcmonkey.sentinel.SentinelPlugin;
 import org.mcmonkey.sentinel.SentinelTrait;
 
 import java.util.Map;
@@ -34,11 +39,12 @@ import java.util.stream.Collectors;
 import static comfortable_andy.combat.util.VecUtil.bukkitAverage;
 
 @SuppressWarnings("UnstableApiUsage")
-public class CombatSentinelIntegration extends SentinelIntegration {
+public class CombatSentinelIntegration extends SentinelIntegration implements Listener {
 
     public static final String META_KEY = "use-combat";
     public static final String ENABLE_SHIELD = "enable-shield-dash";
     public static final String ENABLE_LEAP = "enable-leap";
+    public static final String ENABLE_CHARGE = "enable-charge";
 
     private final Map<SentinelTrait, TrackingData> ticking = new ConcurrentHashMap<>();
 
@@ -72,7 +78,7 @@ public class CombatSentinelIntegration extends SentinelIntegration {
                     if (npcEntity instanceof Player player)
                         CombatMain.getInstance().getData(player).updateDelays();
 
-                    if (trait.cTick >= SentinelPlugin.instance.tickRate) continue;
+//                    if (trait.cTick >= SentinelPlugin.instance.tickRate) continue;
 
                     boolean attacking = isPlanningAttack(chasing, false);
                     if (chasing.hasActiveItem() || attacking) {
@@ -110,21 +116,22 @@ public class CombatSentinelIntegration extends SentinelIntegration {
                                                     0
                                             ))
                             );
+                            // only leaping up because the horizontal velocity is handled by
+                            // the code that pulls npc-s towards land
                             npcPlayer.getWorld().spawnParticle(Particle.GUST, npcPlayer.getLocation(), 5, 0.1, 0.1, 0.1, 0.05);
                             data.setExtraCooldown("leap", 20 * 3);
                         }
                     }
+
+                    double xyDistance = npcPlayer.getLocation()
+                            .subtract(chasing.getLocation()).toVector()
+                            .setY(0)
+                            .length();
+                    float chaseReach = PlayerUtil.getReach(chasing);
                     if (
                             trackData.shieldTicks > 0 ||
-                            (planningAttack
-//                                            && maceDist < chaseReach * 4
-                                    && data.getNoAttack(true) < 1)
+                            (planningAttack && data.getNoAttack(true) < 1)
                     ) {
-                        float chaseReach = PlayerUtil.getReach(chasing);
-                        double xyDistance = npcPlayer.getLocation()
-                                .subtract(chasing.getLocation()).toVector()
-                                .setY(0)
-                                .length();
                         boolean shouldAvoid = xyDistance > chaseReach && trackData.shieldTicks <= 0;
                         npcPlayer.setVelocity(new org.bukkit.util.Vector(0, 0, 1)
                                 .rotateAroundY(-Math.toRadians(chasing.getLocation().getYaw()))
@@ -132,9 +139,44 @@ public class CombatSentinelIntegration extends SentinelIntegration {
                                 .multiply(trait.speed / (10 - Math.min(5, trackData.shieldTicks + chasing.getFallDistance())))
                                 .setY(trackData.shieldTicks > 0 ? 0 : 0.05)
                         );
-//                                boolean impulse = ((CraftPlayer) chasing).getHandle().currentImpulseImpactPos != null;
-//                                chasing.sendActionBar(Component.text((shouldAvoid ? "avoiding" : "dashing") + " impulse " + impulse  + " with shield ticks=" + data.shieldTicks + " tick=" + Bukkit.getCurrentTick()));
                     }
+
+                    if (npc.data().get(ENABLE_CHARGE, false)) {
+                        if (data.getExtraCooldown("charge") > 0) {
+                            if (trackData.charging != 0) npcPlayer.setSneaking(false);
+                            trackData.charging = 0;
+                            npc.getNavigator().setPaused(false);
+                        } else {
+                            boolean random = ThreadLocalRandom.current().nextDouble() > 0.7 + (xyDistance / trait.chaseRange);
+                            boolean tooFar = xyDistance / trait.chaseRange >= 0.75;
+                            boolean activate = trackData.charging > 0 // already activating
+                                    || tooFar || random;
+                            if (activate && Math.abs(npcPlayer.getY() - chasing.getY()) < 2) {
+                                if (trackData.charging == 0) {
+                                    CombatMain.getInstance()
+                                            .runAction(
+                                                    npcPlayer,
+                                                    IAction.ActionType.SNEAK,
+                                                    false
+                                            );
+                                }
+                                trackData.charging++;
+                                if (trackData.charging > 17)
+                                    chasing.sendActionBar(Component.text("Danger!"));
+                                npc.getNavigator().setPaused(true);
+                                npcPlayer.setSneaking(true);
+                                if (trackData.charging > 17 && (xyDistance < chaseReach)) {
+                                    npcPlayer.setSneaking(false);
+                                }
+                            } else {
+                                if (trackData.charging > 0) npcPlayer.setSneaking(false);
+                                trackData.charging = 0;
+                                npc.getNavigator().setPaused(false);
+                            }
+                        }
+                    }
+
+                    // dash back to land
                     Block below = npcPlayer.getLocation().subtract(0, 0.1, 0).getBlock();
                     if (!npc.isFlyable() && below.isEmpty()
                             && below.getRelative(0, -1, 0).isEmpty()
@@ -165,6 +207,32 @@ public class CombatSentinelIntegration extends SentinelIntegration {
                 && ((CraftPlayer) player).getHandle().currentImpulseImpactPos != null)
                 && (offHand == Material.MACE
                 || mainHand == Material.MACE);
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onProjectileHitBlockingNpc(ProjectileHitEvent event) {
+        if (!(event.getHitEntity() != null
+                && CitizensAPI.getNPCRegistry().isNPC(event.getHitEntity()))) return;
+        NPC npc = CitizensAPI.getNPCRegistry().getNPC(event.getHitEntity());
+        SentinelTrait trait = npc.getTraitNullable(SentinelTrait.class);
+        if (trait == null) return;
+        if (trait.isBlocking && event.getHitEntity() instanceof LivingEntity le) {
+            var direction = le.getLocation().getDirection();
+            var toProjectile = event.getEntity()
+                    .getLocation()
+                    .subtract(le.getLocation())
+                    .toVector();
+            if (direction.dot(toProjectile) < 0) return;
+            event.setCancelled(true);
+            BlocksAttacks data = le.getActiveItem().getData(DataComponentTypes.BLOCKS_ATTACKS);
+            if (data != null) {
+                Key soundKey = data.blockSound();
+                if (soundKey == null) return;
+                Sound sound = Registry.SOUNDS.get(soundKey);
+                if (sound == null) return;
+                le.getWorld().playSound(le, sound, 1, 1);
+            }
+        }
     }
 
     @Override
@@ -245,6 +313,7 @@ public class CombatSentinelIntegration extends SentinelIntegration {
         private org.bukkit.util.Vector movementAverage = new org.bukkit.util.Vector();
         private org.bukkit.util.Vector movementAverageAverage = new org.bukkit.util.Vector();
         private int shieldTicks = 0;
+        private int charging = 0;
 
         public Vector<Location> getLastLocations() {
             return new Vector<>(lastLocations);
