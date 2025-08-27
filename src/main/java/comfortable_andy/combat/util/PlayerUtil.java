@@ -51,8 +51,10 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
+import static comfortable_andy.combat.CombatMain.debug;
 import static comfortable_andy.combat.util.VecUtil.fromJoml;
 import static comfortable_andy.combat.util.VecUtil.rotateLocal;
+import static io.papermc.paper.event.entity.EntityKnockbackEvent.*;
 import static org.bukkit.util.NumberConversions.ceil;
 
 public class PlayerUtil {
@@ -77,6 +79,8 @@ public class PlayerUtil {
         final double strengthScale = Mth.clamp((ticks - ticksLeft + 0.5) / ticks, 0, 1);
         final AtomicBoolean sentStrongKnockBack = new AtomicBoolean();
         final AtomicBoolean updatedExhaust = new AtomicBoolean();
+        final AtomicBoolean reducedVelocity = new AtomicBoolean();
+        final AtomicBoolean playedAttackSound = new AtomicBoolean();
         final double knockBack = getKnockBack(player, slot) + (strengthScale > 0.9 && player.isSprinting() ? 1 : 0) + item.getEnchantmentLevel(Enchantment.KNOCKBACK);
         final ServerPlayer playerHandle = ((CraftPlayer) player).getHandle();
         final double initialDamage;
@@ -120,19 +124,6 @@ public class PlayerUtil {
                             return;
                         }
                     }
-                    if (knockBack > 0 && e instanceof LivingEntity living) {
-                        playerHandle.setDeltaMovement(playerHandle.getDeltaMovement().multiply(0.6, 1, 0.6));
-                        if (!paperConfig.misc.disableSprintInterruptionOnAttack) {
-                            player.setSprinting(false);
-                        }
-                        ((CraftLivingEntity) living).getHandle().knockback(
-                                knockBack,
-                                -mtv.getX(),
-                                -mtv.getZ(),
-                                playerHandle,
-                                EntityKnockbackEvent.Cause.ENTITY_ATTACK
-                        );
-                    }
                     final DamageSource source = DamageSource
                             .builder(DamageType.PLAYER_ATTACK)
                             .withCausingEntity(player)
@@ -156,18 +147,72 @@ public class PlayerUtil {
                         sourceHandle.critical();
                         finalFinalDamage *= 1.5;
                     }
-                    if (player.isSprinting() && !sentStrongKnockBack.get()) {
-                        world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_KNOCKBACK, 1, 1);
-                        sentStrongKnockBack.set(true);
-                    }
                     final double hpBefore = e instanceof LivingEntity le ? le.getHealth() : -1;
                     final boolean hurt = entityHandle.hurtServer(
                             level,
                             sourceHandle,
                             (float) finalFinalDamage
                     );
+                    if (CombatMain.getInstance().isDebugLog()) {
+                        debug(player.getName() + " -> " + e.getName() + " success? " + hurt);
+                        debug("    original damage is " + initialDamage);
+                        debug("    damage mod is " + damageMod);
+                        debug("    enchant damage is " + enchantmentDamage);
+                        debug("    bonus damage is " + bonus);
+                        debug("    strength is " + strengthScale);
+                    }
+                    if (!hurt) {
+                        debug("    played no damage");
+                        world.playSound(
+                                location,
+                                Sound.ENTITY_PLAYER_ATTACK_NODAMAGE,
+                                1,
+                                1
+                        );
+                        return;
+                    }
+                    boolean shouldDoKnockback = player.isSprinting() && strengthScale > 0.9 && !sentStrongKnockBack.get();
+                    if (shouldDoKnockback) {
+                        debug("    should knockback? true");
+                        world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_KNOCKBACK, 1, 1);
+                        sentStrongKnockBack.set(true);
+                        if (!paperConfig.misc.disableSprintInterruptionOnAttack) {
+                            player.setSprinting(false);
+                        }
+                        if (entityHandle instanceof net.minecraft.world.entity.LivingEntity le) {
+                            le.knockback(
+                                    knockBack * 0.5,
+                                    -mtv.getX(),
+                                    -mtv.getZ(),
+                                    playerHandle,
+                                    Cause.ENTITY_ATTACK
+                            );
+                        } else {
+                            entityHandle.push(
+                                    -mtv.getX() * knockBack * 0.5,
+                                    0.1,
+                                    -mtv.getZ() * knockBack * 0.5,
+                                    playerHandle
+                            );
+                        }
+                        if (!reducedVelocity.get()) {
+                            debug("    reduced velocity");
+                            playerHandle.setDeltaMovement(
+                                    playerHandle
+                                            .getDeltaMovement()
+                                            .multiply(
+                                                    0.6,
+                                                    1,
+                                                    0.6
+                                            )
+                            );
+                            reducedVelocity.set(true);
+                        }
+                    }
                     boolean doPost = false;
+
                     if (e instanceof LivingEntity livingEntity) {
+                        debug("    is living? true");
                         doPost = nmsStack.hurtEnemy(
                                 ((CraftLivingEntity) livingEntity).getHandle(),
                                 playerHandle
@@ -180,54 +225,60 @@ public class PlayerUtil {
                         );
                     }
 
-                    if (doPost)
+                    if (!item.isEmpty() && doPost) {
+                        debug("    do post? true");
                         nmsStack.postHurtEnemy(
                                 (net.minecraft.world.entity.LivingEntity) entityHandle,
                                 playerHandle
                         );
+                    }
                     if (player.getInventory().getItem(slot).equals(item)) { // prevent dropping
                         CraftItemStack mirror = CraftItemStack.asCraftMirror(nmsStack);
                         player.getInventory().setItem(slot, mirror);
                     }
-                    if (!(hurt)) {
-                        world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_NODAMAGE, 1, 1);
-                        return;
-                    }
 
-                    if (critical) {
-                        world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_CRIT, 1, 1);
-                        playerHandle.crit(entityHandle);
-                    } else {
-                        if (strengthScale > 0.9)
-                            world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_STRONG, 1, 1);
-                        else world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_WEAK, 1, 1);
-                    }
-                    if (enchantmentDamage > 0) {
-                        playerHandle.magicCrit(entityHandle);
-                    }
-                    if (hpBefore != -1) {
-                        final double actualDamage = hpBefore - ((LivingEntity) e).getHealth();
-                        final int addingToStat = (int) Math.round(actualDamage * 10);
-                        if (addingToStat > 0) player.incrementStatistic(Statistic.DAMAGE_DEALT, addingToStat);
-                        final int hearts = (int) (actualDamage / 2);
+                    final double actualDamage = hpBefore == -1 ? 0 : hpBefore - ((LivingEntity) e).getHealth();
 
-                        if (hearts > 0) {
-                            world.spawnParticle(
-                                    Particle.DAMAGE_INDICATOR,
-                                    e.getLocation().add(0, e.getBoundingBox().getHeight() / 2, 0),
-                                    hearts,
-                                    0.1,
-                                    0.0,
-                                    0.1,
-                                    0.2
-                            );
-                        }
-                    }
+                    debug("    actual dealt damage is " + actualDamage);
 
                     if (!updatedExhaust.get()) {
                         playerHandle.causeFoodExhaustion(level.spigotConfig.combatExhaustion, EntityExhaustionEvent.ExhaustionReason.ATTACK);
                         updatedExhaust.set(true);
                     }
+
+                    if (actualDamage <= 0) return;
+
+                    if (!playedAttackSound.get()) {
+                        debug("    attack sound playing");
+                        if (critical) {
+                            world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_CRIT, 1, 1);
+                            playerHandle.crit(entityHandle);
+                        } else {
+                            if (strengthScale > 0.9)
+                                world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_STRONG, 1, 1);
+                            else world.playSound(location, Sound.ENTITY_PLAYER_ATTACK_WEAK, 1, 1);
+                        }
+                        playedAttackSound.set(true);
+                    }
+                    if (enchantmentDamage > 0) {
+                        playerHandle.magicCrit(entityHandle);
+                    }
+                    final int addingToStat = (int) Math.round(actualDamage * 10);
+                    if (addingToStat > 0) player.incrementStatistic(Statistic.DAMAGE_DEALT, addingToStat);
+                    final int hearts = (int) (actualDamage / 2);
+
+                    if (hearts > 0) {
+                        world.spawnParticle(
+                                Particle.DAMAGE_INDICATOR,
+                                e.getLocation().add(0, e.getBoundingBox().getHeight() / 2, 0),
+                                hearts,
+                                0.1,
+                                0.0,
+                                0.1,
+                                0.2
+                        );
+                    }
+                    playerHandle.setLastHurtMob(entityHandle);
                 },
                 strengthScale > 0.9
         );
