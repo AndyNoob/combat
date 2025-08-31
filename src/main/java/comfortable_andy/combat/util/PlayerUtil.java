@@ -4,7 +4,6 @@ import comfortable_andy.combat.CombatMain;
 import comfortable_andy.combat.CombatPlayerData;
 import comfortable_andy.combat.handler.OrientedBoxHandler;
 import io.papermc.paper.configuration.WorldConfiguration;
-import io.papermc.paper.event.entity.EntityKnockbackEvent;
 import net.kyori.adventure.key.Key;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -71,8 +70,8 @@ public class PlayerUtil {
     }
 
     @SuppressWarnings("UnstableApiUsage")
-    public static void doSweep(Player player, Quaterniond start, Vector3d attack, int steps, boolean isAttack, double speedMod, double damageMod, long ticksLeft, CombatPlayerData data) {
-        final EquipmentSlot slot = isAttack ? EquipmentSlot.HAND : EquipmentSlot.OFF_HAND;
+    public static void doSweep(Player player, Quaterniond start, Vector3d attack, int steps, boolean isMainHand, double speedMod, double damageMod, long ticksLeft, CombatPlayerData data) {
+        final EquipmentSlot slot = isMainHand ? EquipmentSlot.HAND : EquipmentSlot.OFF_HAND;
         final double cd = getCd(player, slot);
         final int ticks = ceil(cd * speedMod);
         final ItemStack item = player.getInventory().getItem(slot);
@@ -387,7 +386,10 @@ public class PlayerUtil {
     public static double getItemLess(Player player, Attribute attribute, String... modKeys) {
         final AttributeInstance instance = player.getAttribute(attribute);
         final List<AttributeModifier> mods = new ArrayList<>();
-        for (@Subst("minecraft:base_attack_speed") String itemModKey : modKeys) {
+        var excluded = new ArrayList<>(Arrays.asList(modKeys));
+        addToExclude(attribute, player.getInventory().getItemInMainHand(), excluded);
+        addToExclude(attribute, player.getInventory().getItemInOffHand(), excluded);
+        for (@Subst("minecraft:base_attack_speed") String itemModKey : excluded) {
             final AttributeModifier itemMod = instance.getModifier(Key.key(itemModKey));
             if (itemMod != null) {
                 instance.removeModifier(itemMod);
@@ -399,16 +401,33 @@ public class PlayerUtil {
         return val;
     }
 
+    private static void addToExclude(Attribute attribute, ItemStack item, ArrayList<String> excluded) {
+        if (item == null) return;
+        if (item.hasItemMeta()) {
+            var list = item.getItemMeta()
+                    .getAttributeModifiers(attribute);
+
+            if (list != null) {
+                list.stream()
+                        .map(AttributeModifier::getName)
+                        .forEach(excluded::add);
+            }
+        }
+    }
+
     public static double getCd(Player player, EquipmentSlot slot) {
-        return 1 / (getItemLess(player, Attribute.ATTACK_SPEED, Item.BASE_ATTACK_SPEED_ID.toString()) + ItemUtil.getAttribute(player.getInventory().getItem(slot), EquipmentSlot.HAND, Attribute.ATTACK_SPEED)) * 20;
+        ItemStack item = player.getInventory().getItem(slot);
+        return 1 / (getItemLess(player, Attribute.ATTACK_SPEED, Item.BASE_ATTACK_SPEED_ID.toString()) + ItemUtil.getAttribute(item, EquipmentSlot.HAND, Attribute.ATTACK_SPEED)) * 20;
     }
 
     public static double getDmg(Player player, EquipmentSlot slot) {
-        return getItemLess(player, Attribute.ATTACK_DAMAGE, Item.BASE_ATTACK_DAMAGE_ID.toString()) + ItemUtil.getAttribute(player.getInventory().getItem(slot), EquipmentSlot.HAND, Attribute.ATTACK_DAMAGE);
+        ItemStack item = player.getInventory().getItem(slot);
+        return getItemLess(player, Attribute.ATTACK_DAMAGE, Item.BASE_ATTACK_DAMAGE_ID.toString()) + ItemUtil.getAttribute(item, EquipmentSlot.HAND, Attribute.ATTACK_DAMAGE);
     }
 
     public static double getKnockBack(Player player, EquipmentSlot slot) {
-        return getItemLess(player, Attribute.ATTACK_KNOCKBACK) + ItemUtil.getAttribute(player.getInventory().getItem(slot), EquipmentSlot.HAND, Attribute.ATTACK_KNOCKBACK);
+        ItemStack item = player.getInventory().getItem(slot);
+        return getItemLess(player, Attribute.ATTACK_KNOCKBACK) + ItemUtil.getAttribute(item, EquipmentSlot.HAND, Attribute.ATTACK_KNOCKBACK);
     }
 
     public static boolean canAttack(Player attacker, Entity attacked) {
