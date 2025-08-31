@@ -186,6 +186,11 @@ public final class CombatMain extends JavaPlugin implements Listener {
                             .then(reload)
                             .then(enable)
                             .then(show)
+                            .then(Commands.literal("debug").executes(c -> {
+                                debugLog = !debugLog;
+                                c.getSource().getSender().sendMessage("Debug log: " + debugLog);
+                                return 1;
+                            }))
                             .build(),
                     "Combat plugin command.",
                     List.of("cb")
