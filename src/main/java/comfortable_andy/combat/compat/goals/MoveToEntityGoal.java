@@ -1,5 +1,6 @@
 package comfortable_andy.combat.compat.goals;
 
+import comfortable_andy.combat.CombatMain;
 import comfortable_andy.combat.compat.CombatTrait;
 import lombok.RequiredArgsConstructor;
 import net.citizensnpcs.api.ai.event.CancelReason;
@@ -27,6 +28,11 @@ public class MoveToEntityGoal extends BehaviorGoalAdapter {
 
     @Override
     public BehaviorStatus run() {
+        if (trait.getPlayer().isSprinting()) {
+            npc.getNavigator().getLocalParameters().speedModifier((float) (trait.speed + 0.3f));
+        } else {
+            npc.getNavigator().getLocalParameters().speedModifier((float) trait.speed);
+        }
         if (this.finished) {
             return this.reason == null ? BehaviorStatus.SUCCESS : BehaviorStatus.FAILURE;
         } else {
@@ -39,7 +45,7 @@ public class MoveToEntityGoal extends BehaviorGoalAdapter {
         boolean executing = !this.npc.getNavigator().isNavigating() && this.target != null;
 
         if (executing) {
-            System.out.println("speed " + trait.speed);
+            CombatMain.debug("speed " + trait.speed);
             this.npc.getNavigator().setTarget(target, false);
             this.npc.getNavigator().getLocalParameters()
                     .speedModifier((float) trait.speed)

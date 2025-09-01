@@ -13,6 +13,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.util.Vector;
 
+import static comfortable_andy.combat.CombatMain.debug;
 import static org.bukkit.util.NumberConversions.ceil;
 
 public class AttackGoal extends BehaviorGoalAdapter {
@@ -34,18 +35,18 @@ public class AttackGoal extends BehaviorGoalAdapter {
     @Override
     public BehaviorStatus run() {
         /*if (!trait.planningToAttack) {
-            System.out.println("what the hell");
+            debug("what the hell");
             Thread.dumpStack();
             return BehaviorStatus.FAILURE;
         }*/
         if (trait.target == null) {
-            System.out.println("why are you null");
+            CombatMain.debug("why are you null");
             return BehaviorStatus.FAILURE;
         }
-        npc.faceLocation(trait.target.getLocation());
         Location location = trait.getPlayer().getLocation();
         Vector dir = trait.target.getLocation().subtract(location).toVector().normalize();
         location.setDirection(dir);
+        if (data == null) return BehaviorStatus.FAILURE;
         data.overridePosAndCamera(location);
         if (CombatMain.getInstance().runAction(
                 (Player) npc.getEntity(),
@@ -53,7 +54,7 @@ public class AttackGoal extends BehaviorGoalAdapter {
                 false
         )) {
             int noAttack = ceil(PlayerUtil.getCd(data.getPlayer(), EquipmentSlot.HAND));
-            System.out.println(noAttack);
+            debug(noAttack);
             data.setNoAttack(
                     true,
                     noAttack

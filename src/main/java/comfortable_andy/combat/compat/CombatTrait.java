@@ -27,6 +27,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 @TraitName("combat")
 public class CombatTrait extends Trait implements Listener {
@@ -37,6 +38,7 @@ public class CombatTrait extends Trait implements Listener {
     public double speed = 0.1;
     @Persist("strafeOffset")
     public double strafeOffset = 2;
+    private double strafeDirection = 1;
     private Marker marker;
     public boolean planningToAttack = false;
     private final List<Goal> goals = new ArrayList<>();
@@ -75,27 +77,39 @@ public class CombatTrait extends Trait implements Listener {
             });
         markerMarker.teleport(marker);
         npcMarker.teleport(npc.getStoredLocation());
-        moveMarkerToTarget();
         float reach = PlayerUtil.getReach((Attributable) npc.getEntity());
         planningToAttack = target != null && target.getLocation().distanceSquared(npc.getEntity().getLocation()) <= reach * reach;
+        if (target != null) {
+            boolean shouldSprint = target.getLocation()
+                    .distanceSquared(npc.getEntity().getLocation()) > (reach + 0.5) * (reach + 0.5);
+            getPlayer().setSprinting(shouldSprint);
+            moveMarkerToTarget(!shouldSprint);
+            if (ThreadLocalRandom.current().nextDouble() > 0.9) strafeDirection *= -1;
+            if (shouldSprint) {
+                npc.faceLocation(target.getLocation());
+                target.sendActionBar(Component.text("" + target.getLocation().distance(npc.getEntity().getLocation())));
+            }
+        }
     }
 
-    public void moveMarkerToTarget() {
+    public void moveMarkerToTarget(boolean strafe) {
         if (target == null) {
             groundMarker();
             return;
         }
         Marker marker = findMarker();
-        var toTarget = target.getLocation().toVector()
-                .subtract(getLocation().toVector())
-                .normalize();
-        var offset = toTarget.clone()
-                .rotateAroundY(Math.PI / 2)
-                .multiply(strafeOffset);
-        float reach = PlayerUtil.getReach(getPlayer());
-        var newPos = target.getLocation()
-                .add(offset)
-                .subtract(toTarget.multiply(Math.sqrt(reach * reach - strafeOffset * strafeOffset)));
+        var newPos = target.getLocation();
+        if (strafe) {
+            var toTarget = target.getLocation().toVector()
+                    .subtract(getLocation().toVector())
+                    .normalize();
+            var offset = toTarget.clone()
+                    .rotateAroundY(Math.PI / 2)
+                    .multiply(strafeOffset * strafeDirection);
+            float reach = PlayerUtil.getReach(getPlayer());
+            newPos.add(offset)
+                    .subtract(toTarget.multiply(Math.sqrt(reach * reach - strafeOffset * strafeOffset)));
+        }
         marker.teleport(newPos);
     }
 
@@ -132,7 +146,7 @@ public class CombatTrait extends Trait implements Listener {
         );
         goals.add(attackGoal);
         goals.add(moveToGoal);
-        System.out.println("attached");
+        CombatMain.debug("attached");
         // TODO other goals
     }
 
@@ -170,7 +184,7 @@ public class CombatTrait extends Trait implements Listener {
                     CombatMain.getInstance(),
                     () -> {
                         npc.spawn(npc.getStoredLocation());
-                        System.out.println("respawned");
+                        CombatMain.debug("respawned");
                     },
                     20
             );
