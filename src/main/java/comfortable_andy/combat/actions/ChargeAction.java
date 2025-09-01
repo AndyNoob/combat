@@ -11,6 +11,8 @@ import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.craftbukkit.entity.CraftLivingEntity;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
+import org.bukkit.damage.DamageSource;
+import org.bukkit.damage.DamageType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
@@ -33,6 +35,7 @@ public class ChargeAction implements IAction {
             final int maxChargeAmount = 20 * 2;
             final int minChargeAmount = 10;
             boolean chargeComplete = false;
+            @SuppressWarnings("UnstableApiUsage")
             @Override
             public void run() {
                 if (!player.isSneaking() && counter < minChargeAmount) {
@@ -82,7 +85,11 @@ public class ChargeAction implements IAction {
                                         EntityKnockbackEvent.Cause.ENTITY_ATTACK
                                 );
                                 double damage = PlayerUtil.getDmg(player, EquipmentSlot.HAND) * 5 * progress;
-                                living.damage(damage, player);
+                                living.damage(damage, DamageSource
+                                        .builder(DamageType.PLAYER_ATTACK)
+                                        .withDamageLocation(player.getLocation())
+                                        .withDirectEntity(player)
+                                        .build());
                             }
                         },
                         true
