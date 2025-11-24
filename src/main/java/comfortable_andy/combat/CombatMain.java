@@ -1,100 +1,47 @@
 package comfortable_andy.combat;
 
-import com.destroystokyo.paper.MaterialTags;
-import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.BoolArgumentType;
-import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
-import comfortable_andy.combat.actions.*;
-import comfortable_andy.combat.compat.CombatSentinelIntegration;
-import comfortable_andy.combat.handler.OrientedBoxHandler;
-import comfortable_andy.combat.util.PlayerUtil;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
-import io.papermc.paper.command.brigadier.argument.ArgumentTypes;
-import io.papermc.paper.command.brigadier.argument.resolvers.selector.EntitySelectorArgumentResolver;
-import io.papermc.paper.event.player.PrePlayerAttackEntityEvent;
 import io.papermc.paper.plugin.lifecycle.event.LifecycleEventManager;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import lombok.Getter;
 import lombok.Setter;
 import me.comfortable_andy.mapable.Mapable;
 import me.comfortable_andy.mapable.MapableBuilder;
-import net.citizensnpcs.api.CitizensAPI;
-import net.citizensnpcs.api.npc.NPC;
-import net.minecraft.network.chat.Component;
-import org.bukkit.GameMode;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.enchantments.Enchantment;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
-import org.bukkit.event.Listener;
-import org.bukkit.event.block.Action;
-import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.event.block.BlockDamageAbortEvent;
-import org.bukkit.event.block.BlockDamageEvent;
-import org.bukkit.event.player.PlayerDropItemEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerToggleSneakEvent;
-import org.bukkit.inventory.EquipmentSlot;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.util.Vector;
-import org.mcmonkey.sentinel.SentinelPlugin;
-import org.mcmonkey.sentinel.SentinelTrait;
+import org.jetbrains.annotations.NotNull;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static comfortable_andy.combat.util.PlayerUtil.getCd;
-import static org.bukkit.util.NumberConversions.ceil;
-
 @SuppressWarnings("unused")
-public final class CombatMain extends JavaPlugin implements Listener {
+public final class CombatMain extends JavaPlugin {
 
     private static CombatMain INSTANCE;
 
     public final Map<Player, CombatPlayerData> playerData = new ConcurrentHashMap<>();
-    public final OrientedBoxHandler boxHandler = new OrientedBoxHandler();
     @Setter
     @Getter
     private boolean debugLog = false;
-    private final List<IAction> actions = new ArrayList<>();
     private final Mapable mapable = new MapableBuilder().createMapable();
     private boolean enabled;
     @Getter
     private boolean showActionBarDebug = false;
     @Getter
     private CombatOptions combatOptions;
-    @Getter
-    private SweepAction sweep;
-    @Getter
-    private BashAction bash;
-    @Getter
-    private ShieldBashAction shieldBash;
 
     @SuppressWarnings("UnstableApiUsage")
     @Override
     public void onEnable() {
         INSTANCE = this;
         reload();
-        loadCompat();
-        new CombatRunnable().runTaskTimer(this, 0, 1);
-        boxHandler.runTaskTimer(this, 0, 1);
-        getServer().getPluginManager().registerEvents(this, this);
 
-        final LifecycleEventManager<Plugin> manager = this.getLifecycleManager();
+        final LifecycleEventManager<@NotNull Plugin> manager = this.getLifecycleManager();
         manager.registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             final Commands commands = event.registrar();
             final var reload = Commands
@@ -117,25 +64,6 @@ public final class CombatMain extends JavaPlugin implements Listener {
                 s.getSource().getSender().sendMessage("Enabled Combat: " + enabled);
                 return Command.SINGLE_SUCCESS;
             };
-            final Command<CommandSourceStack> npcExecutor = s -> {
-                final EntitySelectorArgumentResolver selector = s.getArgument("npc", EntitySelectorArgumentResolver.class);
-                NPC npc = CitizensAPI.getNPCRegistry().getNPC(selector.resolve(s.getSource()).getFirst());
-                if (npc == null) {
-                    throw new SimpleCommandExceptionType(Component.literal("NPC not found.")).create();
-                }
-                if (!npc.hasTrait(SentinelTrait.class)) {
-                    throw new SimpleCommandExceptionType(Component.literal("NPC a sentinel.")).create();
-                }
-                Boolean enable;
-                try {
-                    enable = s.getArgument("enable", Boolean.class);
-                } catch (Exception e) {
-                    enable = !npc.data().get(CombatSentinelIntegration.META_KEY, false);
-                }
-                npc.data().setPersistent(CombatSentinelIntegration.META_KEY, enable);
-                s.getSource().getSender().sendMessage("Enabled NPC \"" + npc.getName() + "\": " + npc.data().get(CombatSentinelIntegration.META_KEY));
-                return Command.SINGLE_SUCCESS;
-            };
             final var enable = Commands
                     .literal("enable")
                     .requires(s -> s.getSender()
@@ -146,16 +74,6 @@ public final class CombatMain extends JavaPlugin implements Listener {
                                     .executes(enableExecutor)
                             )
                             .executes(enableExecutor)
-                    )
-                    .then(Commands.literal("npc")
-                            .then(Commands
-                                    .argument("npc", ArgumentTypes.entity())
-                                    .requires(s -> getServer().getPluginManager().isPluginEnabled("Sentinel"))
-                                    .then(Commands
-                                            .argument("enable", BoolArgumentType.bool())
-                                            .executes(npcExecutor)
-                                    )
-                                    .executes(npcExecutor))
                     );
             final var show = Commands
                     .literal("show")
@@ -169,13 +87,115 @@ public final class CombatMain extends JavaPlugin implements Listener {
                         s.getSource().getSender().sendMessage("Show Camera Dir: " + combatOptions.cameraDirectionTitle());
                         return Command.SINGLE_SUCCESS;
                     }));
+            /*final var box = Commands.literal("box")
+                    .requires(s -> s.getSender().hasPermission("combat.command.box")
+                            && s.getSender() instanceof Player)
+                    .then(Commands
+                            .literal("rotate")
+                            .then(Commands
+                                    .argument("rot", DoubleArgumentType.doubleArg())
+                                    .then(Commands
+                                            .argument("axis", Vec2Argument.vec2())
+                                            .executes(s -> {
+                                                if (!(s.getSource().getSender() instanceof Player player)) {
+                                                    throw new SimpleCommandExceptionType(Component.literal("You must be a player.")).create();
+                                                }
+                                                OrientedBox testBox = getData(player).getTestBox();
+                                                if (testBox == null) {
+                                                    throw new SimpleCommandExceptionType(Component.literal("You must create your box first.")).create();
+                                                }
+                                                Vec2 rot = s.getArgument("axis", Coordinates.class)
+                                                        .getRotation((net.minecraft.commands.CommandSourceStack) s.getSource());
+                                                Vector3d axis = new Location(null, 0, 0, 0, rot.y, rot.x).getDirection().toVector3d();
+                                                AtomicInteger counter = new AtomicInteger();
+                                                Bukkit.getScheduler().runTaskTimer(this, task -> {
+                                                    if (counter.getAndIncrement() >= 10) {
+                                                        task.cancel();
+                                                        return;
+                                                    }
+                                                    OrientedBox.displayLine(
+                                                            player.getWorld(),
+                                                            testBox.getCenter()
+                                                                    .toVector3d().sub(axis.mul(6, new Vector3d())),
+                                                            axis.mul(12, new Vector3d()),
+                                                            Color.BLACK,
+                                                            Collections.singleton(player),
+                                                            25
+                                                    );
+                                                }, 0, 10);
+                                                Quaterniond quat = new Quaterniond().rotationAxis(
+                                                        Math.toRadians(s.getArgument("rot", Double.class)),
+                                                        axis.x,
+                                                        axis.y,
+                                                        axis.z
+                                                );
+                                                testBox.rotateBy(quat);
+                                                s.getSource().getSender().sendMessage("Done! Rotated by " + quat);
+                                                return Command.SINGLE_SUCCESS;
+                                            })
+                                    ))
+                    )
+                    .then(Commands
+                            .literal("make")
+                            .then(Commands
+                                    .argument("halfExtents", Vec3Argument.vec3())
+                                    .executes(s -> {
+                                        if (!(s.getSource().getSender() instanceof Player player)) {
+                                            throw new SimpleCommandExceptionType(Component.literal("You must be a player.")).create();
+                                        }
+                                        Vector3f pos = player.getLocation().toVector().toVector3f();
+                                        Vector3f halfExtents = s.getArgument("halfExtents", Coordinates.class)
+                                                .getPosition((net.minecraft.commands.CommandSourceStack) s.getSource())
+                                                .toVector3f();
+                                        BoundingBox boundingBox = new BoundingBox(
+                                                -halfExtents.x + pos.x, -halfExtents.y + pos.y, -halfExtents.z + pos.z,
+                                                halfExtents.x + pos.x, halfExtents.y + pos.y, halfExtents.z + pos.z
+                                        );
+                                        getData(player).setTestBox(new OrientedBox(boundingBox));
+                                        player.sendMessage("Done!");
+                                        return Command.SINGLE_SUCCESS;
+                                    })
+                            )
+                    )
+                    .then(Commands
+                            .literal("remove")
+                            .executes(s -> {
+                                if (!(s.getSource().getSender() instanceof Player player)) {
+                                    throw new SimpleCommandExceptionType(Component.literal("You must be a player.")).create();
+                                }
+                                getData(player).setTestBox(null);
+                                player.sendMessage("Done!");
+                                return Command.SINGLE_SUCCESS;
+                            })
+                    )
+                    .then(Commands
+                            .literal("look")
+                            .executes(s -> {
+                                if (!(s.getSource().getSender() instanceof Player player)) {
+                                    throw new SimpleCommandExceptionType(Component.literal("You must be a player.")).create();
+                                }
+                                OrientedBox testBox = getData(player).getTestBox();
+                                if (testBox == null) {
+                                    throw new SimpleCommandExceptionType(Component.literal("You must create your box first.")).create();
+                                }
+                                Quaterniond dest = VecUtil.fromDir(player.getLocation());
+                                testBox.rotateBy(testBox.getAxis()
+                                        .getUnnormalizedRotation(new Quaterniond())
+                                        .invert()
+                                );
+                                testBox.getAxis().identity();
+                                testBox.rotateBy(dest.normalize());
+                                player.sendMessage("Done!");
+                                return Command.SINGLE_SUCCESS;
+                            })
+                    );*/
             commands.register(
                     Commands.literal("combat")
-                            .requires(s -> s.getSender()
-                                    .hasPermission("combat.command.use"))
+                            .requires(s -> s.getSender().hasPermission("combat.command.use"))
                             .then(reload)
                             .then(enable)
                             .then(show)
+//                            .then(box)
                             .build(),
                     "Combat plugin command.",
                     List.of("cb")
@@ -188,270 +208,19 @@ public final class CombatMain extends JavaPlugin implements Listener {
         reloadConfig();
         enabled = getConfig().getBoolean("enabled");
         combatOptions = new CombatOptions();
-        loadActions();
+    }
+
+    public void debug(String value) {
+        if (!debugLog) return;
+        getLogger().info(value);
+    }
+
+    public static void debug(Object value) {
+        getInstance().debug(String.valueOf(value));
     }
 
     public static CombatMain getInstance() {
         return INSTANCE;
-    }
-
-    public final Set<Player> interactBlacklist = Collections.synchronizedSet(new HashSet<>());
-
-    private void tempBlacklist(Player player) {
-        interactBlacklist.add(player);
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                interactBlacklist.remove(player);
-            }
-        }.runTaskLater(this, 1);
-    }
-
-    @EventHandler(ignoreCancelled = true)
-    public void onPlayerLaunchProjectile(PlayerLaunchProjectileEvent event) {
-        tempBlacklist(event.getPlayer());
-    }
-
-    @EventHandler(ignoreCancelled = true)
-    public void onPlayerDropItem(PlayerDropItemEvent event) {
-        tempBlacklist(event.getPlayer());
-    }
-
-    @EventHandler
-    public void onBlockDamage(BlockDamageEvent event) {
-        if (!event.getInstaBreak())
-            interactBlacklist.add(event.getPlayer());
-    }
-
-    @EventHandler(ignoreCancelled = true)
-    public void onBlockBreak(BlockBreakEvent event) {
-        interactBlacklist.remove(event.getPlayer());
-    }
-
-    @EventHandler(ignoreCancelled = true)
-    public void onStopBreaking(BlockDamageAbortEvent event) {
-        interactBlacklist.remove(event.getPlayer());
-    }
-
-    @EventHandler(priority = EventPriority.HIGHEST)
-    public void onPlayerInteract(PlayerInteractEvent event) {
-        if (!enabled) return;
-        if (event.getAction().isLeftClick() && interactBlacklist.contains(event.getPlayer())) {
-            interactBlacklist.remove(event.getPlayer());
-            return;
-        }
-        if (event.getHand() != EquipmentSlot.HAND) return; // interact event fires once for each hand
-        if (event.getAction() == Action.PHYSICAL) return;
-        final ItemStack itemMain = event.getPlayer().getInventory().getItemInMainHand();
-        final ItemStack itemOff = event.getPlayer().getInventory().getItemInOffHand();
-        final String mainHand = itemMain.getType().toString();
-        final String offHand = itemOff.getType().toString();
-        if (event.getAction().isLeftClick()
-                && getConfig().getStringList("left-click-blacklist").contains(mainHand)) {
-            return;
-        }
-        if (event.getAction().isRightClick()) {
-            if (getConfig().getBoolean("block-food-right-click", true)
-                    && (itemMain.getType().isEdible() || itemOff.getType().isEdible())) return;
-            if (getConfig().getBoolean("block-block-right-click", true)
-                    && (itemMain.getType().isBlock() || itemOff.getType().isBlock())) return;
-            if (getConfig().getBoolean("block-armor-right-click", true)
-                    && (MaterialTags.ARMOR.isTagged(itemMain) || MaterialTags.ARMOR.isTagged(itemOff))) return;
-            if (getConfig().getBoolean("block-bucket-right-click", true)
-                    && (MaterialTags.ARMOR.isTagged(itemMain) || MaterialTags.BUCKETS.isTagged(itemOff))) return;
-            if (getConfig().getStringList("right-click-blacklist").contains(mainHand)
-                    || getConfig().getStringList("right-click-blacklist").contains(offHand)) {
-                return;
-            }
-        }
-        final boolean cancel = runAction(event.getPlayer(), event.getAction().isLeftClick() ? IAction.ActionType.ATTACK : IAction.ActionType.INTERACT, event.getClickedBlock() != null);
-        if (cancel && event.getAction() != Action.LEFT_CLICK_BLOCK) event.setCancelled(true);
-    }
-
-    public boolean runAction(Player player, IAction.ActionType actionType, boolean clickedBlock) {
-        if (player.getGameMode() == GameMode.SPECTATOR) return false;
-        final CombatPlayerData data = getData(player);
-        final boolean isConventional = actionType != IAction.ActionType.DOUBLE_SNEAK;
-        final boolean isAttack = actionType == IAction.ActionType.ATTACK;
-        if (isConventional) {
-            if (data.getNoAttack(isAttack) > 0)
-                return false;
-            if (!isAttack) {
-                if (player.getInventory().getItemInOffHand().isEmpty())
-                    return false;
-                player.swingOffHand();
-                if (!clickedBlock) interactBlacklist.add(player);
-            }
-        }
-        for (IAction action : actions) {
-            if (action.tryActivate(player, data, actionType) == IAction.ActionResult.ACTIVATED) {
-                final EquipmentSlot slot = isAttack ? EquipmentSlot.HAND : EquipmentSlot.OFF_HAND;
-                final int cd = ceil(getCd(player, slot));
-                data.setCooldown(isAttack, cd);
-                return true;
-            }
-        }
-        return false;
-    }
-
-    @EventHandler
-    public void onPlayerAttack(PrePlayerAttackEntityEvent e) {
-        if (!enabled) return;
-        final Player player = e.getPlayer();
-        final Entity attacked = e.getAttacked();
-        final Vector direction = (attacked instanceof LivingEntity le ? le.getEyeLocation() : attacked.getLocation()).clone().subtract(player.getEyeLocation()).toVector().normalize();
-        final Vector reachDirection = direction.clone().multiply(PlayerUtil.getReach(player));
-        final Location compensatedLocation = attacked.getLocation().add(reachDirection.clone().multiply(-1));
-        compensatedLocation.subtract(0, Math.max(0, player.getHeight() - attacked.getHeight()), 0);
-        compensatedLocation.setDirection(direction);
-        getData(player).overridePosAndCamera(compensatedLocation);
-        IAction.ActionType type = IAction.ActionType.ATTACK;
-        if (player.isRiptiding()) {
-            boolean main = canRiptide(player.getInventory().getItemInMainHand());
-            boolean off = canRiptide(player.getInventory().getItemInOffHand());
-            if (off || main) return;
-        }
-        e.setCancelled(true);
-        runAction(player, type, false);
-    }
-
-    private final Map<Player, Long> lastUnSneak = new HashMap<>();
-
-    @EventHandler
-    public void onToggleSneak(PlayerToggleSneakEvent event) {
-        Player player = event.getPlayer();
-        if (!event.isSneaking()) {
-            if (!lastUnSneak.containsKey(player))
-                lastUnSneak.put(player, System.currentTimeMillis());
-        } else {
-            if (!lastUnSneak.containsKey(player)) return;
-            if (System.currentTimeMillis() - lastUnSneak.remove(player) > getConfig().getLong("double-sneak-threshold-ms", 500)) return;
-            runAction(player, IAction.ActionType.DOUBLE_SNEAK, false);
-        }
-    }
-
-    private boolean canRiptide(ItemStack item) {
-        return item.getType() == Material.TRIDENT && item.getEnchantmentLevel(Enchantment.RIPTIDE) > 0;
-    }
-
-    public void debug(Object... stuff) {
-        if (!debugLog) return;
-        getLogger().info(String.join(" ", Arrays.stream(stuff).map(Objects::toString).toArray(String[]::new)));
-    }
-
-    public CombatPlayerData getData(Player player) {
-        return playerData.computeIfAbsent(player, CombatPlayerData::new);
-    }
-
-    public void purgeData() {
-        playerData.entrySet().removeIf(d -> {
-            if (getServer().getPluginManager().isPluginEnabled("Sentinel")) {
-                if (CitizensAPI.getNPCRegistry().isNPC(d.getKey())) return false;
-            }
-            return !d.getValue().getPlayer().isOnline();
-        });
-    }
-
-    public void loadActions() {
-        actions.clear();
-        sweep = loadAction("actions/sweep.yml", SweepAction.class);
-        bash = loadAction("actions/bash.yml", BashAction.class);
-        shieldBash = loadAction("actions/shield_bash.yml", ShieldBashAction.class);
-        actions.addAll(Arrays.asList(
-                shieldBash,
-                loadAction("actions/swing.yml", SwingAction.class),
-                sweep,
-                bash,
-                new StabAction()
-        ));
-        getLogger().info("Loaded " + actions);
-    }
-
-    private void loadCompat() {
-        if (getServer().getPluginManager().isPluginEnabled("Sentinel")) {
-            SentinelPlugin.instance.registerIntegration(new CombatSentinelIntegration());
-            getLogger().info("Found Sentinel, added integration.");
-        }
-    }
-
-    public <V extends IAction> V loadAction(String fileName, Class<V> clazz) {
-        File file = new File(getDataFolder(), fileName);
-        if (!file.exists()) {
-            try {
-                if (getClassLoader().getResource(fileName) == null) {
-                    if (!(file.getParentFile().exists() || file.getParentFile().mkdirs()) && !file.createNewFile()) {
-                        throw new IllegalStateException("could not load or create: " + file);
-                    }
-                } else {
-                    try (InputStream resource = getResource(fileName); FileOutputStream write = new FileOutputStream(file)) {
-                        assert resource != null;
-                        write.write(resource.readAllBytes());
-                    }
-                }
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
-        try {
-            return mapable.fromMap(configToMap(YamlConfiguration.loadConfiguration(file)), clazz);
-        } catch (ReflectiveOperationException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    public Map<String, Object> configToMap(YamlConfiguration config) {
-        final Map<String, Object> map = new HashMap<>();
-        final Map<List<String>, Set<String>> toRead = new ConcurrentHashMap<>();
-        toRead.put(new ArrayList<>(), config.getKeys(false));
-        while (!toRead.isEmpty()) {
-            for (Iterator<Map.Entry<List<String>, Set<String>>> iterator = toRead.entrySet().iterator(); iterator.hasNext(); ) {
-                Map.Entry<List<String>, Set<String>> e = iterator.next();
-
-                final List<String> path = e.getKey();
-                final Set<String> keys = e.getValue();
-
-                Map<String, Object> addingTo = path.isEmpty() ? map : (Map<String, Object>) map
-                        .computeIfAbsent(path.getFirst(), k -> new HashMap<>());
-
-                for (int i = 1; i < path.size(); i++) {
-                    final String s = path.get(i);
-                    addingTo = (Map<String, Object>) addingTo
-                            .computeIfAbsent(s, k -> new HashMap<>());
-                }
-
-                for (String key : keys) {
-                    final List<String> newPath = new ArrayList<>(path);
-                    newPath.add(key);
-                    final String concatNewPath = String.join(".", newPath);
-                    if (config.isConfigurationSection(concatNewPath)) {
-                        toRead.computeIfAbsent(newPath, k -> new HashSet<>()).addAll(
-                                Objects.requireNonNull(config.getConfigurationSection(concatNewPath)).getKeys(false)
-                        );
-                    } else {
-                        addingTo.put(key, config.get(concatNewPath));
-                    }
-                }
-                iterator.remove();
-            }
-        }
-        return map;
-    }
-
-    public void prependAction(IAction action) {
-        this.actions.addFirst(action);
-    }
-
-    public void appendAction(IAction action) {
-        this.actions.add(action);
-    }
-
-    public void insertAction(int i, IAction action) {
-        this.actions.add(i, action);
-    }
-
-    public List<IAction> getActions() {
-        return new ArrayList<>(actions);
     }
 
 }

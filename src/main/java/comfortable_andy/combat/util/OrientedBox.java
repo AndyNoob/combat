@@ -2,7 +2,7 @@ package comfortable_andy.combat.util;
 
 import comfortable_andy.combat.CombatMain;
 import lombok.Getter;
-import org.apache.commons.lang.math.DoubleRange;
+import org.apache.commons.lang3.Range;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.Particle;
@@ -52,8 +52,8 @@ public class OrientedBox implements Cloneable {
         this.vertices[6] = min.clone().add(new Vector(0, height, widthZ));
     }
 
-    public static void displayLine(World world, Vector3d start, Vector3d delta, Color col, Collection<? extends Player> players) {
-        for (int j = 0; j < 5; j++) {
+    public static void displayLine(World world, Vector3d start, Vector3d delta, Color col, Collection<? extends Player> players, int steps) {
+        for (int j = 0; j < steps; j++) {
             for (Player player : players) {
                 player.spawnParticle(
                         Particle.DUST,
@@ -77,22 +77,15 @@ public class OrientedBox implements Cloneable {
     @SuppressWarnings("UnusedReturnValue")
     public OrientedBox moveBy(Vector move) {
         this.center.add(move);
-        for (Vector vertex : this.vertices) {
-            vertex.add(move);
-        }
         return this;
     }
 
     public OrientedBox rotateBy(Quaterniondc rot) {
-        for (int i = 0; i < this.vertices.length; i++) {
-            final Vector v = this.vertices[i];
-            this.vertices[i] = fromJoml(fromBukkit(v.subtract(this.center)).rotate(rot)).add(this.center);
-        }
         this.axis.rotate(rot);
         return this;
     }
 
-    private DoubleRange project(Vector axis) {
+    private Range<Double> project(Vector axis) {
         double min = Double.POSITIVE_INFINITY;
         double max = Double.NEGATIVE_INFINITY;
         for (Vector vertex : vertices) {
@@ -100,7 +93,7 @@ public class OrientedBox implements Cloneable {
             if (d > max) max = d;
             if (d < min) min = d;
         }
-        return new DoubleRange(min, max);
+        return Range.of(min, max);
     }
 
     @NotNull
@@ -108,31 +101,31 @@ public class OrientedBox implements Cloneable {
         final List<Vector> options = new ArrayList<>();
         for (int i = 0; i < 6; i++) {
             final Vector axis = fromJoml((i <= 2 ? this : other).axis.getColumn(i % 3, new Vector3d()));
-            final DoubleRange thisRange = this.project(axis);
-            final DoubleRange otherRange = other.project(axis);
+            final Range<Double> thisRange = this.project(axis);
+            final Range<Double> otherRange = other.project(axis);
 
-            if (!thisRange.overlapsRange(otherRange)) return new ArrayList<>();
+            if (!thisRange.isOverlappedBy(otherRange)) return new ArrayList<>();
 
-            final List<Double> vals = Arrays.asList(
-                    thisRange.getMinimumDouble(),
-                    thisRange.getMaximumDouble(),
-                    otherRange.getMinimumDouble(),
-                    otherRange.getMaximumDouble()
-            );
-
-            vals.sort(Double::compare);
+            double[] vals = new double[]{
+                    thisRange.getMinimum(),
+                    thisRange.getMaximum(),
+                    otherRange.getMinimum(),
+                    otherRange.getMaximum()
+            };
+            Arrays.sort(vals);
 
             final Vector mtvCandidate;
-            double multi = vals.get(2) - vals.get(1);
+            double multi = vals[2] - vals[1];
 
             CombatMain.getInstance().debug("axis " + axis + " " + axis.isNormalized());
 
             if (thisRange.containsRange(otherRange) || otherRange.containsRange(thisRange)) {
                 CombatMain.getInstance().debug("contains");
-                multi += Math.copySign(1, multi) * Math.min(Math.abs(vals.get(3) - vals.get(2)), Math.abs(vals.get(1) - vals.get(0)));
+                multi += Math.copySign(1, multi) *
+                        Math.min(Math.abs(vals[3] - vals[2]), Math.abs(vals[1] - vals[0]));
             }
 
-            if (vals.get(0) == otherRange.getMinimumDouble()) {
+            if (Objects.equals(vals[0], otherRange.getMinimum())) {
                 CombatMain.getInstance().debug("negating");
                 multi *= -1;
             }
@@ -140,7 +133,7 @@ public class OrientedBox implements Cloneable {
             mtvCandidate = axis.clone().multiply(multi);
 
             CombatMain.getInstance().debug("ranges -- this: " + thisRange + ", other: " + otherRange);
-            CombatMain.getInstance().debug("sorted -- " + vals);
+            CombatMain.getInstance().debug("sorted -- " + Arrays.toString(vals));
             CombatMain.getInstance().debug("multi -- " + multi);
             CombatMain.getInstance().debug("candidate -- " + mtvCandidate.toVector3f().toString(new DecimalFormat("#.##")));
 
@@ -150,9 +143,9 @@ public class OrientedBox implements Cloneable {
         return options;
     }
 
-    public void display(World world, Predicate<Player> shouldDisplayTo) {
+    public void display(World world, Predicate<Player> shouldDisplayTo, int times) {
         new BukkitRunnable() {
-            int count = 0;
+            int count = times;
             final Collection<? extends Player> players = Bukkit.getOnlinePlayers().stream().filter(shouldDisplayTo).toList();
 
             @Override
@@ -164,12 +157,12 @@ public class OrientedBox implements Cloneable {
                 for (int i = 0; i < 3; i++) {
                     final Vector3d vector = axis.getColumn(i, new Vector3d());
                     final Color col = colors.next();
-                    displayLine(world, center.toVector3d(), vector, col, players);
+                    displayLine(world, center.toVector3d(), vector, col, players, 5);
                 }
                 if (count-- <= 0) cancel();
             }
 
-        }.runTaskTimer(CombatMain.getInstance(), 0, 20);
+        }.runTaskTimer(CombatMain.getInstance(), 0, 5);
     }
 
     @SuppressWarnings("MethodDoesntCallSuperMethod")

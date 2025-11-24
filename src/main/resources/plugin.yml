@@ -11,3 +11,5 @@ permissions:
     default: op
   combat.command.enable:
     default: op
+  combat.command.box:
+    default: op
